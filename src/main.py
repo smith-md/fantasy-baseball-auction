@@ -16,7 +16,7 @@ from .stat_converter import (
     get_hitter_categories_for_normalization,
     get_pitcher_categories_for_normalization,
 )
-from .normalizer import normalize_hitters, normalize_pitchers
+from .sgp_normalizer import normalize_hitters, normalize_pitchers
 from .position_optimizer import optimize_positions
 from .replacement_calculator import calculate_replacement_and_var
 from .dollar_allocator import allocate_dollars
@@ -166,9 +166,9 @@ def main():
         hitters_df = convert_hitter_stats(hitters_df)
         pitchers_df = convert_pitcher_stats(pitchers_df)
 
-        # Step 5: Normalize stats (z-scores)
+        # Step 5: Calculate SGP (Standings Gain Points)
         logger.info("\n" + "="*60)
-        logger.info("STEP 5: Calculating Z-Scores and Raw Values")
+        logger.info("STEP 5: Calculating Standings Gain Points (SGP)")
         logger.info("="*60)
 
         hitter_categories = get_hitter_categories_for_normalization()

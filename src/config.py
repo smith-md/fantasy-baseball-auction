@@ -63,17 +63,21 @@ COMPOUND_CATEGORIES = {
     'SV_HLD': ['SV', 'HLD'],  # Saves + Holds
 }
 
-# FanGraphs API Endpoints (unofficial JSON endpoints)
-FANGRAPHS_BASE_URL = "https://www.fangraphs.com/api/leaders/major-league/data"
+# FanGraphs API Endpoints
+FANGRAPHS_BASE_URL = "https://www.fangraphs.com/api/projections"
 
 # Projection systems to fetch
-PROJECTION_SYSTEMS = ['steamer', 'zips', 'atc']
+# Using all available UNIQUE systems for 2025: steamer, fangraphsdc
+# Note: steamer600 is excluded as it's just steamer scaled to 600 PA
+PROJECTION_SYSTEMS = ['steamer', 'fangraphsdc']
 
-# FanGraphs projection system mappings
+# FanGraphs projection system mappings (use as-is, no prefix needed)
 PROJECTION_TYPE_MAP = {
-    'steamer': 'steamerr',  # Note: FanGraphs uses 'steamerr' for ROS projections
-    'zips': 'rzips',
-    'atc': 'ratc',
+    'steamer': 'steamer',
+    'steamer600': 'steamer600',
+    'fangraphsdc': 'fangraphsdc',
+    'zips': 'zips',  # Keep for when available
+    'atc': 'atc',    # Keep for when available
 }
 
 # Required stats for hitters
@@ -86,7 +90,7 @@ HITTER_STATS_OPTIONAL = ['H', 'BB', 'HBP', 'SF', 'TB']
 
 # Required stats for pitchers
 PITCHER_STATS_REQUIRED = [
-    'IP', 'W', 'QS', 'SV', 'HLD', 'K', 'ERA', 'WHIP'
+    'IP', 'W', 'QS', 'SV', 'HLD', 'SO', 'ERA', 'WHIP'  # Note: FanGraphs uses 'SO' not 'K'
 ]
 
 # Optional but preferred pitcher stats (for validation/alternate calculations)
@@ -122,3 +126,34 @@ CACHE_EXPIRY_DAYS = 7  # Cache API responses for 7 days
 # Logging
 LOG_LEVEL = 'INFO'
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+# ===== SGP (Standings Gain Points) CONFIGURATION =====
+
+# Historical Data
+SGP_DATA_DIR = 'data/standings'
+SGP_SEASONS = [2023, 2024, 2025]  # Seasons to use for SGP calculation
+
+# Multi-Year Weighting (more recent seasons weighted higher)
+SGP_SEASON_WEIGHTS = {
+    2023: 1.0,
+    2024: 1.5,
+    2025: 2.0,
+}
+
+# Replacement Level Baselines for Ratio Categories
+# Full-season roster of replacement-level players
+REPLACEMENT_HITTER_PA = 450      # Average PA for replacement hitter
+REPLACEMENT_PITCHER_IP = 150     # Average IP for replacement pitcher
+
+# Replacement level rate stats (auto-calculated from player pool if None)
+REPLACEMENT_OBP = None   # Auto-calculate if None
+REPLACEMENT_SLG = None   # Auto-calculate if None
+REPLACEMENT_ERA = None   # Auto-calculate if None
+REPLACEMENT_WHIP = None  # Auto-calculate if None
+
+# Diagnostic Output
+DIAGNOSTICS_DIR = 'data/diagnostics'
+SGP_WRITE_DIAGNOSTICS = True
+
+# SGP Calculation Method
+SGP_METHOD = 'median_gap'  # 'median_gap' (only method supported initially)
