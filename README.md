@@ -1,27 +1,39 @@
 # Fantasy Baseball Auction Draft Valuation Model
 
-A Python-based auction draft valuation system for fantasy baseball that converts player projections into auction dollar values using z-score normalization, positional scarcity analysis, and dynamic budget allocation.
+A Python-based auction draft valuation system for fantasy baseball that converts player projections into auction dollar values using **Standings Gain Points (SGP)** methodology, positional scarcity analysis, and dynamic budget allocation. Includes **live draft mode** for real-time valuation updates during your auction.
 
 ## Overview
 
 This tool generates auction dollar values for fantasy baseball players based on:
-- **Player Projections**: Fetches and combines Steamer, ZiPS, and ATC projections from FanGraphs
+- **Player Projections**: Fetches and combines Steamer and FanGraphs DC projections from FanGraphs
+- **SGP Valuation**: Uses historical league standings to calculate Standings Gain Points instead of z-scores
 - **League Settings**: Configured for 12-team roto leagues with standard roster construction
 - **Positional Scarcity**: Accounts for multi-position eligibility and replacement levels
 - **Dynamic Split**: Allocates budget between hitters/pitchers based on total value generated
 - **Keeper Support**: Adjusts valuations when players are retained from previous seasons
+- **Live Draft Mode**: Real-time valuation updates during auction via Fantrax API integration
 
 ## Features
 
+### Batch Mode (Pre-Draft Valuations)
 - Fetches projections from FanGraphs unofficial API endpoints
 - Combines multiple projection systems using simple mean
 - Converts rate stats (OBP, SLG, ERA, WHIP) to playing-time-weighted contributions
-- Normalizes categories using z-scores
+- **Uses Standings Gain Points (SGP) methodology** based on historical league standings
 - Optimizes position assignments using greedy scarcity-based algorithm
 - Calculates replacement levels and value above replacement (VAR)
 - Dynamically allocates $6,000 budget between hitters and pitchers
 - Supports keeper leagues
 - Outputs detailed CSV with player valuations, rankings, and projections
+
+### Live Draft Mode (Real-Time Updates)
+- **Polls Fantrax API** for draft transactions during your auction
+- **Automatic valuation updates** within 2 seconds of each pick
+- **Event-driven architecture** - only runs when picks occur
+- **Crash recovery** via append-only event log
+- **JSON cache output** for local consumption or web UI integration
+- Reuses existing SGP valuation engine for consistency
+- Team budget and roster tracking across all teams
 
 ## Installation
 
@@ -59,6 +71,27 @@ Then run:
 python -m src.main --season 2026 --keepers keepers.csv
 ```
 
+### Live Draft Mode
+
+Run real-time valuations during your Fantrax auction draft:
+
+```bash
+# Set your Fantrax API key (optional)
+export FANTRAX_API_KEY="your_api_key"
+
+# Start live draft mode
+python -m src.main \
+    --season 2026 \
+    --live-draft \
+    --fantrax-league-id YOUR_LEAGUE_ID \
+    --keepers keepers.csv \
+    --poll-interval 10
+```
+
+**Output**: `data/draft_cache/latest_valuations.json` (updated on each pick)
+
+See [LIVE_DRAFT.md](LIVE_DRAFT.md) for complete live draft documentation.
+
 ### Advanced Options
 
 ```bash
@@ -81,15 +114,23 @@ python -m src.main --season 2026 --verbose
 python -m src.main [OPTIONS]
 
 Required Arguments:
-  --season YEAR         Projection season (e.g., 2026)
+  --season YEAR              Projection season (e.g., 2026)
 
-Optional Arguments:
-  --keepers PATH        Path to CSV file with keeper information
-  --output FILENAME     Output filename (default: valuations_<timestamp>.csv)
-  --no-cache           Disable caching and force fresh API calls
-  --separate-files     Write separate CSV files for hitters and pitchers
-  --verbose            Enable verbose logging
-  --help               Show help message
+Batch Mode Arguments:
+  --keepers PATH             Path to CSV file with keeper information
+  --output FILENAME          Output filename (default: valuations_<timestamp>.csv)
+  --no-cache                 Disable caching and force fresh API calls
+  --separate-files           Write separate CSV files for hitters and pitchers
+  --verbose                  Enable verbose logging
+
+Live Draft Mode Arguments:
+  --live-draft               Enable live draft mode
+  --fantrax-league-id ID     Fantrax league ID (required for live mode)
+  --fantrax-api-key KEY      Fantrax API key (or set FANTRAX_API_KEY env var)
+  --poll-interval SECONDS    Polling interval (default: 5)
+
+Other:
+  --help                     Show help message
 ```
 
 ## League Configuration
@@ -123,7 +164,7 @@ The model generates a CSV file with the following columns:
 | assigned_position | Position assigned by optimizer |
 | PA/IP | Playing time projection |
 | R, RBI, SB, etc. | Projected stats |
-| raw_value | Sum of z-scores across categories |
+| raw_value | Sum of SGP values across categories |
 | replacement_level | Replacement level for assigned position |
 | VAR | Value above replacement |
 | auction_value | Auction dollar value |
@@ -136,14 +177,24 @@ The model generates a CSV file with the following columns:
 
 ### Pipeline Overview
 
-1. **Fetch Projections**: Downloads projections from FanGraphs for Steamer, ZiPS, and ATC systems
+**Batch Mode:**
+1. **Fetch Projections**: Downloads projections from FanGraphs (Steamer and FanGraphs DC)
 2. **Combine Systems**: Calculates simple mean across projection systems for each stat
-3. **Convert Rate Stats**: Transforms OBP/SLG/ERA/WHIP into playing-time-weighted contributions
-4. **Normalize**: Calculates z-scores for each category (hitters and pitchers separately)
-5. **Optimize Positions**: Assigns players to roster slots using greedy scarcity algorithm
-6. **Calculate Replacement**: Determines replacement level for each position
-7. **Allocate Dollars**: Converts VAR to auction dollars with dynamic hitter/pitcher split
-8. **Output**: Generates CSV with complete valuations
+3. **Process Keepers**: Removes kept players and adjusts budget/roster (if applicable)
+4. **Convert Rate Stats**: Transforms OBP/SLG/ERA/WHIP into playing-time-weighted contributions
+5. **Calculate SGP**: Uses historical league standings to compute Standings Gain Points for each category
+6. **Optimize Positions**: Assigns players to roster slots using greedy scarcity algorithm
+7. **Calculate Replacement**: Determines replacement level for each position
+8. **Allocate Dollars**: Converts VAR to auction dollars with dynamic hitter/pitcher split
+9. **Output**: Generates CSV with complete valuations
+
+**Live Draft Mode:**
+1. **Initialize**: Fetch projections once at startup (steps 1-2 above)
+2. **Poll Fantrax**: Check for new draft picks every N seconds
+3. **Update State**: Apply draft events to league state (budgets, rosters, drafted players)
+4. **Recompute**: Re-run valuation pipeline (steps 3-8) for remaining players
+5. **Cache Results**: Update JSON cache with latest valuations
+6. **Repeat**: Continue polling until draft ends or user stops
 
 ### Key Algorithms
 
@@ -161,12 +212,26 @@ ERA_contrib = (ERA_avg - ERA_player) × IP
 WHIP_contrib = (WHIP_avg - WHIP_player) × IP
 ```
 
-#### Z-Score Normalization
+#### Standings Gain Points (SGP) Calculation
+
+**SGP** measures how much each statistical unit improves your team's standing in a category.
 
 ```
-z = (player_value - category_mean) / category_std_dev
-raw_value = sum of z-scores across all categories
+# Calculate SGP denominator from historical standings
+SGP_denominator = median(rank-to-rank gaps in historical standings)
+
+# Convert player stats to SGP
+SGP = player_stat_value / SGP_denominator
+
+# Sum across all categories
+raw_value = sum of SGP across all categories
 ```
+
+**Example**: If the median gap between 1st and 2nd place in Runs is 20 runs, then:
+- A player projected for 100 runs = 100 / 20 = 5.0 SGP in Runs
+- This represents contributing 5 standings points in that category
+
+SGP is more league-calibrated than z-scores because it's based on actual historical performance gaps in your specific league format.
 
 #### Position Assignment (Greedy Algorithm)
 
@@ -195,22 +260,42 @@ auction_value = 1 + (player_VAR / total_group_VAR) × group_dollars
 fantasy-baseball-auction/
 ├── src/
 │   ├── config.py                    # League configuration
+│   ├── main.py                      # CLI entry point
 │   ├── data_fetcher.py              # FanGraphs API integration
 │   ├── projection_combiner.py       # Combine projection systems
 │   ├── stat_converter.py            # Convert rate stats
-│   ├── normalizer.py                # Z-score normalization
+│   ├── sgp_normalizer.py            # SGP calculation wrapper
 │   ├── position_optimizer.py        # Position assignment
 │   ├── replacement_calculator.py    # Replacement levels & VAR
 │   ├── dollar_allocator.py          # Auction dollar allocation
 │   ├── keeper_handler.py            # Keeper support
 │   ├── output_writer.py             # CSV generation
-│   └── main.py                      # CLI entry point
+│   ├── sgp/                         # SGP calculation subsystem
+│   │   ├── league_data_loader.py    # Load historical standings
+│   │   ├── category_analyzer.py     # Analyze standings gaps
+│   │   ├── sgp_calculator.py        # Compute SGP values
+│   │   ├── replacement_baseline.py  # Calculate replacement baselines
+│   │   └── diagnostic_writer.py     # SGP diagnostics
+│   └── draft/                       # Live draft subsystem
+│       ├── draft_event.py           # Data structures
+│       ├── draft_state_manager.py   # State management
+│       ├── event_store.py           # Event persistence
+│       ├── fantrax_client.py        # Fantrax API client
+│       ├── live_draft_engine.py     # Main orchestrator
+│       └── result_cache.py          # JSON output cache
 ├── data/
 │   ├── cache/                       # Cached API responses
-│   └── output/                      # Generated CSV files
+│   ├── output/                      # Generated CSV files
+│   ├── standings/                   # Historical league standings (for SGP)
+│   ├── diagnostics/                 # SGP diagnostics
+│   ├── draft_events/                # Live draft event logs (JSONL)
+│   ├── draft_cache/                 # Live draft JSON cache
+│   ├── draft_checkpoints/           # State snapshots
+│   └── mappings/                    # Fantrax player/team mappings
 ├── tests/                           # Unit tests
 ├── requirements.txt
 ├── README.md
+├── LIVE_DRAFT.md                    # Live draft documentation
 └── .gitignore
 ```
 
@@ -294,11 +379,12 @@ If you see warnings like "Could not assign X players":
 
 ## Future Enhancements
 
-- Standings Gain Points (SGP) methodology as alternative to z-scores
+- **Web UI for live draft** - Real-time visualization dashboard
+- **Draft recommendations** - Suggest best picks based on team needs
+- **Multi-league support** - Track multiple drafts simultaneously
 - Linear programming optimization for position assignment
 - Fixed hitter/pitcher split option (e.g., 67/33)
 - Support for points leagues
-- Web UI for draft room integration
 - Risk/volatility adjustments
 - Auction simulator
 
