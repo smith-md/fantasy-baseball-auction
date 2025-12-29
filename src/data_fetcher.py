@@ -64,17 +64,14 @@ class FanGraphsFetcher:
         # Map projection system to FanGraphs API parameter
         fg_projection = config.PROJECTION_TYPE_MAP.get(projection_system, projection_system)
 
-        # Build API URL
-        # Note: This is an unofficial endpoint structure based on common patterns
-        # The actual endpoint may need adjustment based on FanGraphs' current API
+        # Build API URL using correct FanGraphs API structure
         params = {
-            'season': self.season,
-            'stats': player_type,
             'type': fg_projection,
+            'stats': player_type,
             'pos': 'all',
-            'qual': '0',  # No minimum qualification
-            'pagenum': '1',
-            'pagesize': '2000',  # Large enough to get all players
+            'team': '0',
+            'players': '0',
+            'lg': 'all'
         }
 
         url = config.FANGRAPHS_BASE_URL

@@ -64,8 +64,8 @@ class DollarAllocator:
         print(f"Total budget: ${self.total_budget}")
         print(f"Minimum spend: ${self.minimum_spend} ({self.total_players} players × ${config.MINIMUM_BID})")
         print(f"Dollars to allocate: ${self.dollars_to_allocate}")
-        print(f"\nHitter VAR: {hitter_var:.2f} → ${hitter_dollars:.2f} ({hitter_dollars/self.dollars_to_allocate*100:.1f}%)")
-        print(f"Pitcher VAR: {pitcher_var:.2f} → ${pitcher_dollars:.2f} ({pitcher_dollars/self.dollars_to_allocate*100:.1f}%)")
+        print(f"\nHitter VAR: {hitter_var:.2f} -> ${hitter_dollars:.2f} ({hitter_dollars/self.dollars_to_allocate*100:.1f}%)")
+        print(f"Pitcher VAR: {pitcher_var:.2f} -> ${pitcher_dollars:.2f} ({pitcher_dollars/self.dollars_to_allocate*100:.1f}%)")
 
         return hitter_dollars, pitcher_dollars
 

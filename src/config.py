@@ -157,3 +157,22 @@ SGP_WRITE_DIAGNOSTICS = True
 
 # SGP Calculation Method
 SGP_METHOD = 'median_gap'  # 'median_gap' (only method supported initially)
+
+# ===== LIVE DRAFT CONFIGURATION =====
+
+# Fantrax API
+FANTRAX_BASE_URL = "https://www.fantrax.com/fxea/general"
+
+# Polling
+DEFAULT_POLL_INTERVAL = 5  # seconds between Fantrax polls
+POLL_TIMEOUT = 300  # maximum time to wait for a poll (5 minutes)
+
+# Event storage
+DRAFT_EVENTS_DIR = 'data/draft_events'
+DRAFT_CACHE_DIR = 'data/draft_cache'
+DRAFT_CHECKPOINTS_DIR = 'data/draft_checkpoints'
+FANTRAX_MAPPINGS_DIR = 'data/mappings'
+
+# Performance
+ENABLE_PIPELINE_TIMING = True  # Log timing for each valuation run
+TARGET_VALUATION_TIME = 1.0  # Target time in seconds for pipeline recompute

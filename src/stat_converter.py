@@ -165,10 +165,14 @@ def get_pitcher_categories_for_normalization() -> list:
     Get the list of pitcher categories to use for normalization.
 
     This replaces rate stats with their contribution versions.
+    Also maps FanGraphs column names (e.g., SO → K).
 
     Returns:
         List of column names to normalize
     """
+    # FanGraphs uses 'SO' instead of 'K'
+    stat_mapping = {'K': 'SO'}
+
     categories = []
 
     for cat in config.PITCHER_CATEGORIES:
@@ -176,7 +180,8 @@ def get_pitcher_categories_for_normalization() -> list:
             # Use contribution version
             categories.append(f"{cat}_contrib")
         else:
-            # Use raw stat
-            categories.append(cat)
+            # Use raw stat, with FanGraphs mapping
+            mapped_stat = stat_mapping.get(cat, cat)
+            categories.append(mapped_stat)
 
     return categories
