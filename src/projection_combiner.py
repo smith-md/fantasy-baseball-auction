@@ -30,17 +30,24 @@ class ProjectionCombiner:
         Different sources may use different column names for the same stat.
         This function maps common variations to our standard names.
         """
-        # Common column name mappings
+        # Common column name mappings for FanGraphs API
+        # Handle positions: prioritize minpos over Pos
+        if 'minpos' in df.columns:
+            df = df.rename(columns={'minpos': 'positions'})
+            if 'Pos' in df.columns:
+                df = df.drop(columns=['Pos'])  # Remove numeric Pos column
+        elif 'Pos' in df.columns:
+            df = df.rename(columns={'Pos': 'positions'})
+        elif 'pos' in df.columns:
+            df = df.rename(columns={'pos': 'positions'})
+        elif 'Position' in df.columns:
+            df = df.rename(columns={'Position': 'positions'})
+
+        # Other column mappings
         column_mappings = {
             'playerid': 'player_id',
             'PlayerId': 'player_id',
             'PlayerID': 'player_id',
-            'playerName': 'player_name',
-            'Name': 'player_name',
-            'PlayerName': 'player_name',
-            'pos': 'positions',
-            'Pos': 'positions',
-            'Position': 'positions',
             'Team': 'team',
             'team': 'team',
             # Add more mappings as needed
@@ -48,6 +55,16 @@ class ProjectionCombiner:
 
         # Rename columns if they exist
         df = df.rename(columns={k: v for k, v in column_mappings.items() if k in df.columns})
+
+        # Handle player_name: prefer PlayerName, fall back to ShortName
+        if 'PlayerName' in df.columns:
+            df = df.rename(columns={'PlayerName': 'player_name'})
+            if 'ShortName' in df.columns:
+                df = df.drop(columns=['ShortName'])  # Remove duplicate
+        elif 'ShortName' in df.columns:
+            df = df.rename(columns={'ShortName': 'player_name'})
+        elif 'Name' in df.columns:
+            df = df.rename(columns={'Name': 'player_name'})
 
         return df
 
@@ -129,10 +146,17 @@ class ProjectionCombiner:
             raise ValueError("No projections provided")
 
         # Standardize column names for all DataFrames
+        # Skip empty DataFrames
         standardized = {}
         for system, df in self.projections.items():
+            if df is None or len(df) == 0:
+                print(f"Warning: Skipping {system} - no data available")
+                continue
             df_std = self._standardize_column_names(df.copy())
             standardized[system] = df_std
+
+        if not standardized:
+            raise ValueError("No valid projection data available")
 
         # Determine player key
         first_df = next(iter(standardized.values()))
@@ -245,6 +269,18 @@ class ProjectionCombiner:
 
         # Reset index
         combined = combined.reset_index(drop=True)
+
+        # Add default positions for pitchers if not present
+        if player_type == 'pitchers' and 'positions' not in combined.columns:
+            combined['positions'] = combined.apply(lambda x: ['P'], axis=1)
+            print(f"Added default 'P' position for all pitchers")
+        elif player_type == 'pitchers' and 'positions' in combined.columns:
+            # Ensure positions is a list
+            def ensure_list(pos):
+                if isinstance(pos, list) and len(pos) > 0:
+                    return pos
+                return ['P']
+            combined['positions'] = combined['positions'].apply(ensure_list)
 
         print(f"Combined {len(self.projections)} projection systems into {len(combined)} {player_type}")
 

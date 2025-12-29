@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pip install:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "mcp__simple-commands__git_status",
+      "mcp__simple-commands__git_log_recent",
+      "Bash(git add:*)"
+    ]
+  }
+}

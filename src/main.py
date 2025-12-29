@@ -104,16 +104,39 @@ Examples:
         help='Enable verbose logging'
     )
 
+    # Live draft mode arguments
+    parser.add_argument(
+        '--live-draft',
+        action='store_true',
+        help='Run in live draft mode (poll Fantrax API for real-time updates)'
+    )
+
+    parser.add_argument(
+        '--fantrax-league-id',
+        type=str,
+        default=None,
+        help='Fantrax league ID for live draft mode'
+    )
+
+    parser.add_argument(
+        '--fantrax-api-key',
+        type=str,
+        default=None,
+        help='Fantrax API key (or set FANTRAX_API_KEY environment variable)'
+    )
+
+    parser.add_argument(
+        '--poll-interval',
+        type=int,
+        default=5,
+        help='Polling interval in seconds for live draft mode (default: 5)'
+    )
+
     return parser.parse_args()
 
 
-def main():
-    """Main execution function."""
-    # Parse arguments
-    args = parse_arguments()
-
-    # Setup logging
-    setup_logging(args.verbose)
+def run_batch_mode(args):
+    """Run in batch mode (original functionality)."""
     logger = logging.getLogger(__name__)
 
     logger.info("="*60)
@@ -244,6 +267,72 @@ def main():
     except Exception as e:
         logger.exception(f"Error during execution: {e}")
         sys.exit(1)
+
+
+def run_live_draft_mode(args):
+    """Run in live draft mode (event-driven)."""
+    import os
+    from .draft.live_draft_engine import LiveDraftEngine
+
+    logger = logging.getLogger(__name__)
+
+    logger.info("="*60)
+    logger.info("Fantasy Baseball Live Draft Mode")
+    logger.info("="*60)
+
+    # Validate required arguments
+    if not args.fantrax_league_id:
+        logger.error("--fantrax-league-id is required for live draft mode")
+        sys.exit(1)
+
+    # Get API key from args or environment variable
+    api_key = args.fantrax_api_key or os.getenv('FANTRAX_API_KEY')
+    if not api_key:
+        logger.warning(
+            "No Fantrax API key provided. "
+            "Set --fantrax-api-key or FANTRAX_API_KEY environment variable if needed."
+        )
+
+    try:
+        # Initialize live draft engine
+        engine = LiveDraftEngine(
+            season=args.season,
+            league_id=args.fantrax_league_id,
+            api_key=api_key,
+            keepers_file=args.keepers,
+            poll_interval=args.poll_interval
+        )
+
+        # Initialize session (fetch projections, load state, etc.)
+        engine.initialize()
+
+        # Run polling loop
+        engine.run_live_session()
+
+        # Cleanup
+        engine.close()
+
+    except KeyboardInterrupt:
+        logger.info("\nLive draft session interrupted by user")
+    except Exception as e:
+        logger.exception(f"Error during live draft: {e}")
+        sys.exit(1)
+
+
+def main():
+    """Main execution function with mode branching."""
+    # Parse arguments
+    args = parse_arguments()
+
+    # Setup logging
+    setup_logging(args.verbose)
+    logger = logging.getLogger(__name__)
+
+    # Branch to appropriate mode
+    if args.live_draft:
+        run_live_draft_mode(args)
+    else:
+        run_batch_mode(args)
 
 
 if __name__ == '__main__':

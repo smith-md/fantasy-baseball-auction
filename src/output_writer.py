@@ -38,7 +38,10 @@ class OutputWriter:
             Combined DataFrame ready for output
         """
         # Combine hitters and pitchers
-        all_players = pd.concat([hitters_df, pitchers_df], ignore_index=True)
+        # Reset index to avoid duplicate index issues
+        hitters_clean = hitters_df.reset_index(drop=True)
+        pitchers_clean = pitchers_df.reset_index(drop=True)
+        all_players = pd.concat([hitters_clean, pitchers_clean], ignore_index=True)
 
         # Determine merge key
         if 'player_id' in assignments_df.columns and 'player_id' in all_players.columns:
@@ -91,8 +94,12 @@ class OutputWriter:
         # Add hitter stats
         hitter_stat_columns = ['PA', 'AB', 'R', 'RBI', 'SB', 'OBP', 'SLG']
 
-        # Add pitcher stats
-        pitcher_stat_columns = ['IP', 'W', 'QS', 'SV', 'HLD', 'W_QS', 'SV_HLD', 'K', 'ERA', 'WHIP']
+        # Add pitcher stats (Note: FanGraphs uses 'SO' not 'K')
+        pitcher_stat_columns = ['IP', 'W', 'QS', 'SV', 'HLD', 'W_QS', 'SV_HLD', 'SO', 'ERA', 'WHIP']
+
+        # SGP columns (category-level SGP values)
+        hitter_sgp_columns = ['R_sgp', 'RBI_sgp', 'SB_sgp', 'OBP_sgp', 'SLG_sgp']
+        pitcher_sgp_columns = ['K_sgp', 'W_QS_sgp', 'SV_HLD_sgp', 'ERA_sgp', 'WHIP_sgp']
 
         # Valuation columns
         valuation_columns = [
@@ -124,6 +131,19 @@ class OutputWriter:
             stat_cols = hitter_stat_columns + pitcher_stat_columns
 
         for col in stat_cols:
+            if col in df.columns:
+                final_columns.append(col)
+
+        # Add SGP columns (between stats and valuation)
+        if player_type == 'hitter':
+            sgp_cols = hitter_sgp_columns
+        elif player_type == 'pitcher':
+            sgp_cols = pitcher_sgp_columns
+        else:
+            # Include both if not filtered by player type
+            sgp_cols = hitter_sgp_columns + pitcher_sgp_columns
+
+        for col in sgp_cols:
             if col in df.columns:
                 final_columns.append(col)
 
