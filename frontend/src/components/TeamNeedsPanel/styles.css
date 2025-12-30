@@ -1,0 +1,220 @@
+.team-needs-panel {
+  grid-column: 1 / -1;
+}
+
+.team-status {
+  display: flex;
+  gap: 2rem;
+  padding: 0.75rem;
+  background: #e3f2fd;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.status-item {
+  font-size: 0.9rem;
+}
+
+.status-item strong {
+  color: #1976d2;
+  margin-right: 0.5rem;
+}
+
+.needs-list {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.no-needs {
+  padding: 2rem;
+  text-align: center;
+  background: #e8f5e9;
+  border-radius: 4px;
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.need-card {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  overflow: hidden;
+}
+
+.need-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.need-category {
+  display: flex;
+  flex-direction: column;
+}
+
+.category-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.category-rank {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.need-metrics {
+  display: flex;
+  gap: 2rem;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.ease-score {
+  font-size: 1.2rem;
+  font-weight: bold;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+}
+
+.ease-score.score-0,
+.ease-score.score-1,
+.ease-score.score-2 {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.ease-score.score-3,
+.ease-score.score-4,
+.ease-score.score-5 {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.ease-score.score-6,
+.ease-score.score-7,
+.ease-score.score-8,
+.ease-score.score-9,
+.ease-score.score-10 {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.stats-needed {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.recommendations {
+  padding: 1rem;
+}
+
+.recommendations h4 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+  font-size: 0.95rem;
+}
+
+.recommendations-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.recommendations-table th {
+  background: #ecf0f1;
+  padding: 0.4rem;
+  text-align: left;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.recommendations-table td {
+  padding: 0.4rem;
+  border-bottom: 1px solid #eee;
+}
+
+.player-name {
+  font-weight: 600;
+}
+
+.positions {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.category-sgp {
+  font-weight: 600;
+  color: #1976d2;
+}
+
+.total-sgp {
+  color: #555;
+}
+
+.best-targets-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #ddd;
+}
+
+.best-targets-section h3 {
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  color: #2c3e50;
+}
+
+.section-subtitle {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.75rem;
+}
+
+.targets-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.targets-table thead th {
+  background: #2c3e50;
+  color: white;
+  padding: 0.5rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.targets-table tbody td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.targets-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.need-sgp {
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.addresses-categories {
+  font-size: 0.85rem;
+  color: #666;
+}

@@ -1,0 +1,162 @@
+.competition-panel {
+  grid-column: 2 / 3;
+}
+
+.competition-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.competition-table thead th {
+  background: #2c3e50;
+  color: white;
+  padding: 0.5rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.competition-table tbody tr {
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+}
+
+.competition-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.competition-table tbody tr.user-team {
+  background: #e3f2fd;
+  font-weight: 600;
+}
+
+.competition-table tbody tr.user-team:hover {
+  background: #bbdefb;
+}
+
+.competition-table td {
+  padding: 0.5rem;
+}
+
+.budget-cell {
+  font-weight: 600;
+}
+
+.high-budget {
+  color: #c62828;
+  background: #ffebee !important;
+}
+
+.competition-bar {
+  position: relative;
+  width: 100px;
+  height: 20px;
+  background: #ecf0f1;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.competition-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #ff9800);
+  transition: width 0.3s ease;
+}
+
+.competition-score {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2c3e50;
+  z-index: 1;
+}
+
+.position-breakdown td {
+  padding: 0 !important;
+  background: #f5f5f5 !important;
+}
+
+.position-details {
+  padding: 1rem;
+}
+
+.position-details h4 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  color: #2c3e50;
+}
+
+.position-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.5rem;
+  background: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.position-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  background: #ecf0f1;
+  border-radius: 4px;
+}
+
+.position-slot.high-need {
+  background: #ffe0b2;
+  border: 2px solid #ff9800;
+}
+
+.position-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #34495e;
+}
+
+.position-count {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.high-need-notice {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: #fff3e0;
+  border-left: 3px solid #ff9800;
+  font-size: 0.85rem;
+  color: #e65100;
+  font-weight: 600;
+}
+
+.league-summary {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.summary-stat {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.summary-stat .label {
+  font-weight: 600;
+  color: #555;
+}
+
+.summary-stat .value {
+  color: #2c3e50;
+  font-weight: 600;
+}
