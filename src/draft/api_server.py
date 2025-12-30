@@ -23,6 +23,7 @@ from .result_cache import ResultCache
 from .standings_calculator import calculate_projected_standings, get_standings_summary
 from .competition_analyzer import calculate_competition_metrics
 from .team_needs_analyzer import calculate_team_needs, get_best_overall_targets
+from .api_contract_endpoints import contract_router
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include contract API endpoints (stable contract)
+app.include_router(contract_router, prefix="", tags=["Contract API"])
 
 # Global session manager instance
 session_manager = SessionManager(Path(config.DRAFT_SESSIONS_DIR))
@@ -66,6 +70,8 @@ class SessionStatusResponse(BaseModel):
 
 
 # ===== API Endpoints =====
+# NOTE: The endpoints below are legacy endpoints maintained for backward compatibility.
+# New frontends should use the Contract API endpoints defined in api_contract_endpoints.py
 
 @app.post("/draft-session/start", response_model=SessionStatusResponse)
 def start_draft_session(request: StartSessionRequest):
