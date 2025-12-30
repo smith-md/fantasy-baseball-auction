@@ -12,7 +12,7 @@ from typing import Optional
 from datetime import datetime
 import pandas as pd
 
-from .draft_event import LeagueState
+from .league_schema import LeagueState
 
 logger = logging.getLogger(__name__)
 
@@ -54,13 +54,18 @@ class ResultCache:
         # Convert valuations DataFrame to list of player dicts
         players = self._dataframe_to_players(valuations_df)
 
+        # Calculate league-wide totals from teams (v2 schema)
+        available_budget = sum(t.budget_remaining for t in league_state.teams.values())
+        available_roster_spots = sum(t.total_open_slots for t in league_state.teams.values())
+
         # Build cache structure
         cache_data = {
+            "schema_version": "2.0",
             "timestamp": timestamp.isoformat(),
-            "last_pick": league_state.last_processed_pick,
+            "last_pick": league_state.draft.last_processed_pick,
             "total_picks": league_state.total_picks(),
-            "available_budget": league_state.available_budget,
-            "available_roster_spots": league_state.available_roster_spots,
+            "available_budget": available_budget,
+            "available_roster_spots": available_roster_spots,
             "num_players": len(players),
             "team_summary": self._get_team_summary(league_state),
             "players": players
@@ -77,7 +82,7 @@ class ResultCache:
         logger.info(f"Updated cache: {len(players)} players → {self.cache_file}")
 
         # Also save historical snapshot
-        self._save_backup(cache_data, league_state.last_processed_pick)
+        self._save_backup(cache_data, league_state.draft.last_processed_pick)
 
     def get_latest(self) -> Optional[dict]:
         """
@@ -115,6 +120,10 @@ class ResultCache:
             'raw_value', 'VAR', 'replacement_level'
         ]
 
+        # Add player_id if it exists in the DataFrame
+        if 'player_id' in df.columns:
+            core_columns.insert(0, 'player_id')  # Add at the beginning
+
         # Add stat columns based on player type
         stat_columns = []
         if 'PA' in df.columns:  # Hitter
@@ -146,23 +155,31 @@ class ResultCache:
 
     def _get_team_summary(self, league_state: LeagueState) -> list:
         """
-        Generate team summary from league state.
+        Generate team summary from league state (v2 schema).
 
         Args:
-            league_state: Current league state
+            league_state: Current league state (v2)
 
         Returns:
-            List of team summary dicts
+            List of team summary dicts with stats
         """
         summary = []
         for team_id, team in league_state.teams.items():
+            # Calculate rate stats from components
+            rate_stats = team.stats.calculate_rate_stats()
+
             summary.append({
                 "team_id": team_id,
                 "team_name": team.team_name,
-                "picks": len(team.roster),
-                "spent": team.total_spent(),
+                "picks": team.total_roster_size,
+                "spent": team.budget_spent,
                 "budget_remaining": team.budget_remaining,
-                "spots_remaining": team.roster_spots_remaining
+                "spots_remaining": team.total_open_slots,
+                # Include aggregated team stats
+                "stats": {
+                    "counting": team.stats.counting,
+                    "rate": rate_stats
+                }
             })
 
         # Sort by team_id for consistency
