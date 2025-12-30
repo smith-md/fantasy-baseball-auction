@@ -245,13 +245,25 @@ def write_ratio_marginal_impact(
             marginal = player.get(f'{category}_marginal', 0)
             sgp = player.get(f'{category}_sgp', 0)
 
-            # Get baseline and playing time
+            # Get both baselines and playing time
             if player_type == 'hitters':
-                baseline_value = baseline.obp if category == 'OBP' else baseline.slg
-                playing_time = player.get('PA' if category == 'OBP' else 'AB', 0)
-                time_stat = 'PA' if category == 'OBP' else 'AB'
-            else:
-                baseline_value = baseline.era if category == 'ERA' else baseline.whip
+                if category == 'OBP':
+                    league_avg_baseline = baseline.league_avg_obp
+                    replacement_baseline = baseline.replacement_obp
+                    playing_time = player.get('PA', 0)
+                    time_stat = 'PA'
+                else:  # SLG
+                    league_avg_baseline = baseline.league_avg_slg
+                    replacement_baseline = baseline.replacement_slg
+                    playing_time = player.get('AB', 0)
+                    time_stat = 'AB'
+            else:  # pitchers
+                if category == 'ERA':
+                    league_avg_baseline = baseline.league_avg_era
+                    replacement_baseline = baseline.replacement_era
+                else:  # WHIP
+                    league_avg_baseline = baseline.league_avg_whip
+                    replacement_baseline = baseline.replacement_whip
                 playing_time = player.get('IP', 0)
                 time_stat = 'IP'
 
@@ -259,7 +271,9 @@ def write_ratio_marginal_impact(
                 'player': player_name,
                 'category': category,
                 'player_value': player_value,
-                'replacement_value': baseline_value,
+                'league_avg_baseline': league_avg_baseline,
+                'replacement_baseline': replacement_baseline,
+                'baseline_used_for_sgp': 'league_average',
                 'playing_time': playing_time,
                 'time_stat': time_stat,
                 'marginal_impact': marginal,
