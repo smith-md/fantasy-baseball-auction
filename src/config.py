@@ -176,3 +176,24 @@ FANTRAX_MAPPINGS_DIR = 'data/mappings'
 # Performance
 ENABLE_PIPELINE_TIMING = True  # Log timing for each valuation run
 TARGET_VALUATION_TIME = 1.0  # Target time in seconds for pipeline recompute
+
+# ===== DRAFT SESSION API CONFIGURATION =====
+
+# Session storage
+DRAFT_SESSIONS_DIR = 'data/draft_sessions'
+
+# API Server defaults
+API_HOST = '127.0.0.1'
+API_PORT = 8000
+
+# Session limits
+MAX_CONCURRENT_SESSIONS = 1  # Only one session at a time for MVP
+SESSION_TIMEOUT_HOURS = 12   # Auto-expire sessions after 12 hours (future feature)
+
+# ===== FRONTEND CONFIGURATION =====
+
+# User Team ID - Change this to match your team in the league
+USER_TEAM_ID = 'team_01'
+
+# Auto-refresh interval for frontend (seconds)
+FRONTEND_AUTO_REFRESH_INTERVAL = 10

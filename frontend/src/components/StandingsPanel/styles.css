@@ -1,0 +1,149 @@
+.standings-panel {
+  grid-column: 1 / 2;
+}
+
+.panel-subtitle {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.standings-table thead th {
+  background: #2c3e50;
+  color: white;
+  padding: 0.5rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.standings-table tbody tr {
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+}
+
+.standings-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.standings-table tbody tr.user-team {
+  background: #e3f2fd;
+  font-weight: 600;
+}
+
+.standings-table tbody tr.user-team:hover {
+  background: #bbdefb;
+}
+
+.standings-table td {
+  padding: 0.5rem;
+}
+
+.rank-cell {
+  width: 50px;
+  text-align: center;
+  font-weight: 600;
+  color: #555;
+}
+
+.team-name-cell {
+  min-width: 150px;
+}
+
+.user-badge {
+  display: inline-block;
+  background: #2196f3;
+  color: white;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  margin-left: 0.5rem;
+  font-weight: bold;
+}
+
+.total-points-cell {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.gap-cell {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.expand-cell {
+  width: 30px;
+  text-align: center;
+  color: #999;
+  font-size: 0.8rem;
+}
+
+.category-breakdown td {
+  padding: 0 !important;
+  background: #f5f5f5 !important;
+}
+
+.category-details {
+  padding: 1rem;
+}
+
+.category-details h4 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.category-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: white;
+}
+
+.category-table th {
+  background: #ecf0f1;
+  padding: 0.4rem;
+  text-align: left;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.category-table td {
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid #eee;
+}
+
+.category-name {
+  font-weight: 600;
+  color: #34495e;
+}
+
+.standings-summary {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.summary-stat {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.summary-stat .label {
+  font-weight: 600;
+  color: #555;
+}
+
+.summary-stat .value {
+  color: #2c3e50;
+}

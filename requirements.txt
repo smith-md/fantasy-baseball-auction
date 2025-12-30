@@ -6,3 +6,8 @@ tqdm>=4.65.0
 pytest>=7.4.0
 fuzzywuzzy>=0.18.0
 python-Levenshtein>=0.21.0
+
+# API Server dependencies
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
