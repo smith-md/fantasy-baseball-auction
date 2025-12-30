@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ReplacementBaseline:
-    """Replacement-level baseline stats for ratio categories."""
+    """Baseline stats for SGP and VAR calculations."""
     player_type: str  # 'hitters' or 'pitchers'
 
     # Playing time
@@ -26,11 +26,17 @@ class ReplacementBaseline:
     ab: Optional[float] = None   # For hitters
     ip: Optional[float] = None   # For pitchers
 
-    # Rate stats
-    obp: Optional[float] = None
-    slg: Optional[float] = None
-    era: Optional[float] = None
-    whip: Optional[float] = None
+    # Replacement-level rate stats (for VAR)
+    replacement_obp: Optional[float] = None
+    replacement_slg: Optional[float] = None
+    replacement_era: Optional[float] = None
+    replacement_whip: Optional[float] = None
+
+    # League average rate stats (for SGP)
+    league_avg_obp: Optional[float] = None
+    league_avg_slg: Optional[float] = None
+    league_avg_era: Optional[float] = None
+    league_avg_whip: Optional[float] = None
 
 
 def calculate_replacement_baseline(
@@ -62,22 +68,27 @@ def _calculate_hitter_replacement_baseline(
     player_pool: pd.DataFrame
 ) -> ReplacementBaseline:
     """
-    Calculate replacement baseline for hitters.
+    Calculate both replacement and league average baselines for hitters.
 
-    Uses players ranked just below roster threshold (156 hitters rostered).
+    League average: Median stats from rostered tier (top 156 hitters)
+    Replacement level: Median stats from replacement tier (players 157-220)
 
     Args:
         player_pool: Hitter projections DataFrame
 
     Returns:
-        ReplacementBaseline for hitters
+        ReplacementBaseline for hitters with both baselines populated
     """
     # Sort by playing time as proxy for initial ranking
     # (raw_value will be calculated later)
     sorted_pool = player_pool.sort_values('PA', ascending=False).copy()
 
-    # Replacement tier: players ranked 157-220 (below 156 roster spots)
-    # Use larger range for more stable estimates
+    # 1. League average from rostered tier (top 156)
+    rostered_tier = sorted_pool.iloc[:config.TOTAL_HITTERS]
+    league_avg_obp = rostered_tier['OBP'].median()
+    league_avg_slg = rostered_tier['SLG'].median()
+
+    # 2. Replacement level from replacement tier (157-220)
     replacement_start = config.TOTAL_HITTERS  # 156
     replacement_end = replacement_start + 64   # ~220
 
@@ -92,27 +103,29 @@ def _calculate_hitter_replacement_baseline(
     replacement_tier = sorted_pool.iloc[replacement_start:replacement_end]
 
     # Calculate median stats from replacement tier
-    baseline_obp = replacement_tier['OBP'].median()
-    baseline_slg = replacement_tier['SLG'].median()
+    replacement_obp = replacement_tier['OBP'].median()
+    replacement_slg = replacement_tier['SLG'].median()
 
     # Use config values if provided, otherwise auto-calculate
     if config.REPLACEMENT_OBP is not None:
-        baseline_obp = config.REPLACEMENT_OBP
+        replacement_obp = config.REPLACEMENT_OBP
     if config.REPLACEMENT_SLG is not None:
-        baseline_slg = config.REPLACEMENT_SLG
+        replacement_slg = config.REPLACEMENT_SLG
 
     logger.info(
-        f"Hitter replacement baseline: "
-        f"OBP={baseline_obp:.3f}, SLG={baseline_slg:.3f}, "
-        f"PA={config.REPLACEMENT_HITTER_PA}"
+        f"Hitter baselines:\n"
+        f"  League Average - OBP={league_avg_obp:.3f}, SLG={league_avg_slg:.3f}\n"
+        f"  Replacement Level - OBP={replacement_obp:.3f}, SLG={replacement_slg:.3f}"
     )
 
     return ReplacementBaseline(
         player_type='hitters',
         pa=config.REPLACEMENT_HITTER_PA,
         ab=config.REPLACEMENT_HITTER_PA * 0.85,  # Approximate AB from PA
-        obp=baseline_obp,
-        slg=baseline_slg
+        replacement_obp=replacement_obp,
+        replacement_slg=replacement_slg,
+        league_avg_obp=league_avg_obp,
+        league_avg_slg=league_avg_slg
     )
 
 
@@ -120,20 +133,26 @@ def _calculate_pitcher_replacement_baseline(
     player_pool: pd.DataFrame
 ) -> ReplacementBaseline:
     """
-    Calculate replacement baseline for pitchers.
+    Calculate both replacement and league average baselines for pitchers.
 
-    Uses pitchers ranked just below roster threshold (132 pitchers rostered).
+    League average: Median stats from rostered tier (top 132 pitchers)
+    Replacement level: Median stats from replacement tier (pitchers 133-180)
 
     Args:
         player_pool: Pitcher projections DataFrame
 
     Returns:
-        ReplacementBaseline for pitchers
+        ReplacementBaseline for pitchers with both baselines populated
     """
     # Sort by IP as proxy for initial ranking
     sorted_pool = player_pool.sort_values('IP', ascending=False).copy()
 
-    # Replacement tier: pitchers ranked 133-200 (below 132 roster spots)
+    # 1. League average from rostered tier (top 132)
+    rostered_tier = sorted_pool.iloc[:config.TOTAL_PITCHERS]
+    league_avg_era = rostered_tier['ERA'].median()
+    league_avg_whip = rostered_tier['WHIP'].median()
+
+    # 2. Replacement level from replacement tier (133-180)
     replacement_start = config.TOTAL_PITCHERS  # 132
     replacement_end = replacement_start + 48    # ~180
 
@@ -148,26 +167,28 @@ def _calculate_pitcher_replacement_baseline(
     replacement_tier = sorted_pool.iloc[replacement_start:replacement_end]
 
     # Calculate median stats from replacement tier
-    baseline_era = replacement_tier['ERA'].median()
-    baseline_whip = replacement_tier['WHIP'].median()
+    replacement_era = replacement_tier['ERA'].median()
+    replacement_whip = replacement_tier['WHIP'].median()
 
     # Use config values if provided, otherwise auto-calculate
     if config.REPLACEMENT_ERA is not None:
-        baseline_era = config.REPLACEMENT_ERA
+        replacement_era = config.REPLACEMENT_ERA
     if config.REPLACEMENT_WHIP is not None:
-        baseline_whip = config.REPLACEMENT_WHIP
+        replacement_whip = config.REPLACEMENT_WHIP
 
     logger.info(
-        f"Pitcher replacement baseline: "
-        f"ERA={baseline_era:.2f}, WHIP={baseline_whip:.3f}, "
-        f"IP={config.REPLACEMENT_PITCHER_IP}"
+        f"Pitcher baselines:\n"
+        f"  League Average - ERA={league_avg_era:.2f}, WHIP={league_avg_whip:.3f}\n"
+        f"  Replacement Level - ERA={replacement_era:.2f}, WHIP={replacement_whip:.3f}"
     )
 
     return ReplacementBaseline(
         player_type='pitchers',
         ip=config.REPLACEMENT_PITCHER_IP,
-        era=baseline_era,
-        whip=baseline_whip
+        replacement_era=replacement_era,
+        replacement_whip=replacement_whip,
+        league_avg_era=league_avg_era,
+        league_avg_whip=league_avg_whip
     )
 
 
@@ -177,14 +198,14 @@ def calculate_ratio_marginal_impact(
     player_type: str
 ) -> pd.DataFrame:
     """
-    Calculate marginal impact over replacement for ratio categories.
+    Calculate marginal impact over league average for ratio categories.
 
-    This is similar to stat_converter.py but uses replacement baseline
-    instead of league average.
+    Uses league average baseline (not replacement level) to match SGP denominator
+    calculation methodology.
 
     Args:
         player_df: Player projections DataFrame
-        baseline: ReplacementBaseline object
+        baseline: ReplacementBaseline object (contains both baselines)
         player_type: 'hitters' or 'pitchers'
 
     Returns:
@@ -193,43 +214,43 @@ def calculate_ratio_marginal_impact(
     df = player_df.copy()
 
     if player_type == 'hitters':
-        # OBP marginal impact
+        # OBP marginal impact (vs league average)
         if 'OBP' in df.columns and 'PA' in df.columns:
-            df['OBP_marginal'] = (df['OBP'] - baseline.obp) * df['PA']
+            df['OBP_marginal'] = (df['OBP'] - baseline.league_avg_obp) * df['PA']
             logger.debug(
-                f"OBP marginal range: [{df['OBP_marginal'].min():.1f}, "
-                f"{df['OBP_marginal'].max():.1f}]"
+                f"OBP marginal vs league avg (baseline={baseline.league_avg_obp:.3f}): "
+                f"[{df['OBP_marginal'].min():.1f}, {df['OBP_marginal'].max():.1f}]"
             )
         else:
             logger.warning("Missing OBP or PA columns for hitters")
 
-        # SLG marginal impact
+        # SLG marginal impact (vs league average)
         if 'SLG' in df.columns and 'AB' in df.columns:
-            df['SLG_marginal'] = (df['SLG'] - baseline.slg) * df['AB']
+            df['SLG_marginal'] = (df['SLG'] - baseline.league_avg_slg) * df['AB']
             logger.debug(
-                f"SLG marginal range: [{df['SLG_marginal'].min():.1f}, "
-                f"{df['SLG_marginal'].max():.1f}]"
+                f"SLG marginal vs league avg (baseline={baseline.league_avg_slg:.3f}): "
+                f"[{df['SLG_marginal'].min():.1f}, {df['SLG_marginal'].max():.1f}]"
             )
         else:
             logger.warning("Missing SLG or AB columns for hitters")
 
     elif player_type == 'pitchers':
-        # ERA marginal impact (inverted: lower ERA is better)
+        # ERA marginal impact (inverted: lower ERA is better, vs league average)
         if 'ERA' in df.columns and 'IP' in df.columns:
-            df['ERA_marginal'] = (baseline.era - df['ERA']) * df['IP']
+            df['ERA_marginal'] = (baseline.league_avg_era - df['ERA']) * df['IP']
             logger.debug(
-                f"ERA marginal range: [{df['ERA_marginal'].min():.1f}, "
-                f"{df['ERA_marginal'].max():.1f}]"
+                f"ERA marginal vs league avg (baseline={baseline.league_avg_era:.2f}): "
+                f"[{df['ERA_marginal'].min():.1f}, {df['ERA_marginal'].max():.1f}]"
             )
         else:
             logger.warning("Missing ERA or IP columns for pitchers")
 
-        # WHIP marginal impact (inverted: lower WHIP is better)
+        # WHIP marginal impact (inverted: lower WHIP is better, vs league average)
         if 'WHIP' in df.columns and 'IP' in df.columns:
-            df['WHIP_marginal'] = (baseline.whip - df['WHIP']) * df['IP']
+            df['WHIP_marginal'] = (baseline.league_avg_whip - df['WHIP']) * df['IP']
             logger.debug(
-                f"WHIP marginal range: [{df['WHIP_marginal'].min():.1f}, "
-                f"{df['WHIP_marginal'].max():.1f}]"
+                f"WHIP marginal vs league avg (baseline={baseline.league_avg_whip:.3f}): "
+                f"[{df['WHIP_marginal'].min():.1f}, {df['WHIP_marginal'].max():.1f}]"
             )
         else:
             logger.warning("Missing WHIP or IP columns for pitchers")
