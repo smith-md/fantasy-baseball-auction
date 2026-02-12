@@ -85,7 +85,7 @@
   font-size: 0.8rem;
 }
 
-.category-breakdown td {
+.category-breakdown > td {
   padding: 0 !important;
   background: #fafafa !important;
 }
@@ -107,17 +107,26 @@
   background: #fff;
 }
 
-.category-table th {
+.category-details .category-table th {
   background: #f0f0f0;
   padding: 0.4rem;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   color: #000;
 }
 
-.category-table td {
+.category-details .category-table th:first-child {
+  text-align: left;
+}
+
+.category-details .category-table td {
   padding: 0.3rem 0.4rem;
   border-bottom: 1px solid #eee;
+  text-align: center;
+}
+
+.category-details .category-table td.category-name {
+  text-align: left;
 }
 
 .category-name {

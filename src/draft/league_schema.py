@@ -124,6 +124,16 @@ class TeamState:
     open_slots: Dict[str, int]    # position -> remaining count
     stats: TeamStats
 
+    def __post_init__(self):
+        from .. import config
+        for pos, count in self.open_slots.items():
+            max_per_team = config.ROSTER_SLOTS_PER_TEAM.get(pos, 0)
+            if count > max_per_team:
+                raise ValueError(
+                    f"TeamState {self.team_id}: open_slots[{pos}]={count} "
+                    f"exceeds per-team max {max_per_team}"
+                )
+
     @property
     def budget_remaining(self) -> float:
         """Calculate remaining budget."""
@@ -534,7 +544,7 @@ def create_initial_league_state_v2(
             )
         )
 
-    return LeagueState(
+    state = LeagueState(
         league_id=league_id,
         teams=teams,
         players=players,
@@ -546,3 +556,8 @@ def create_initial_league_state_v2(
             notes='Initial league state created'
         )
     )
+
+    # Validate initial state to catch initialization bugs immediately
+    state.validate()
+
+    return state

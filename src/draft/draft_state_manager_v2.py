@@ -59,6 +59,9 @@ class DraftStateManagerV2:
 
         self.position_assigner = PositionAssigner(total_open_slots)
 
+        first_team = next(iter(initial_state.teams.values()))
+        logger.debug(f"First team open_slots: {first_team.open_slots}")
+
         logger.debug(
             f"Initialized DraftStateManagerV2: "
             f"{len(initial_state.teams)} teams, "

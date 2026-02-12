@@ -141,7 +141,9 @@ def calculate_projected_standings(league_state: LeagueState, user_team_id: str =
         rate_stats = projected_stats.calculate_rate_stats()
 
         # Combine counting and rate stats
-        all_stats = {**projected_stats.counting, **rate_stats}
+        # Round counting stats to whole numbers (can't have fractional RBIs, Ks, etc.)
+        rounded_counting = {cat: round(val) for cat, val in projected_stats.counting.items()}
+        all_stats = {**rounded_counting, **rate_stats}
 
         standings.append({
             'team_id': team_id,
