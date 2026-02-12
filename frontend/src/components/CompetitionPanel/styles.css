@@ -40,6 +40,19 @@
 
 .budget-cell {
   font-weight: 600;
+  text-align: center;
+}
+
+.open-slots-cell {
+  text-align: center;
+}
+
+.dollar-slot-cell {
+  text-align: center;
+}
+
+.competition-cell {
+  text-align: center;
 }
 
 .high-budget {
@@ -52,6 +65,7 @@
   height: 18px;
   background: #eee;
   overflow: hidden;
+  margin: 0 auto;
 }
 
 .competition-fill {

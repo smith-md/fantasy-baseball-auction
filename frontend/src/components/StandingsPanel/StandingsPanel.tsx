@@ -31,8 +31,8 @@ export const StandingsPanel: React.FC = () => {
           <tr>
             <th>Rank</th>
             <th>Team</th>
-            <th>Total Points</th>
-            <th>Gap</th>
+            <th style={{ textAlign: 'center' }}>Total Points</th>
+            <th style={{ textAlign: 'center' }}>Gap</th>
             <th></th>
           </tr>
         </thead>

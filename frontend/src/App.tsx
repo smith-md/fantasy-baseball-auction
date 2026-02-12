@@ -57,12 +57,16 @@ const DraftDashboard: React.FC = () => {
             <p>Loading draft data...</p>
           </div>
         ) : (
-          <div className="panels-grid">
-            <AvailablePlayersPanel />
-            <StandingsPanel />
-            <CompetitionPanel />
-            <TeamNeedsPanel />
-          </div>
+          <>
+            <div className="panels-top">
+              <StandingsPanel />
+              <CompetitionPanel />
+              <TeamNeedsPanel />
+            </div>
+            <div className="panels-bottom">
+              <AvailablePlayersPanel />
+            </div>
+          </>
         )}
       </main>
 
