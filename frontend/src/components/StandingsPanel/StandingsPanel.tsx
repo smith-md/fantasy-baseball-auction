@@ -18,6 +18,9 @@ export const StandingsPanel: React.FC = () => {
   };
 
   const allCategories = [...config.categories.hitters, ...config.categories.pitchers];
+  const rateStats = new Set(['OBP', 'SLG', 'ERA', 'WHIP']);
+  const formatStat = (category: string, value: number) =>
+    rateStats.has(category) ? value.toFixed(3) : value.toFixed(0);
 
   return (
     <div className="panel standings-panel">
@@ -61,12 +64,11 @@ export const StandingsPanel: React.FC = () => {
                 <tr className="category-breakdown">
                   <td colSpan={5}>
                     <div className="category-details">
-                      <h4>Category Breakdown</h4>
                       <table className="category-table">
                         <thead>
                           <tr>
                             <th>Category</th>
-                            <th>Projected Stat</th>
+                            <th>Projected Stats</th>
                             <th>Rank</th>
                             <th>Points</th>
                             <th>Gap to Next</th>
@@ -76,7 +78,7 @@ export const StandingsPanel: React.FC = () => {
                           {allCategories.map(category => (
                             <tr key={category}>
                               <td className="category-name">{category}</td>
-                              <td>{team.projected_stats[category]?.toFixed(3)}</td>
+                              <td>{team.projected_stats[category] != null ? formatStat(category, team.projected_stats[category]) : '-'}</td>
                               <td>{formatRank(team.category_ranks[category])}</td>
                               <td>{team.category_points[category]}</td>
                               <td>

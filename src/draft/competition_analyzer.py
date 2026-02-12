@@ -58,7 +58,7 @@ def calculate_competition_metrics(league_state: LeagueState, user_team_id: str =
             'team_name': team.team_name,
             'budget_remaining': round(team.budget_remaining, 2),
             'total_open_slots': team.total_open_slots,
-            'open_slots_by_position': team.open_slots,
+            'open_slots_by_position': dict(team.open_slots),
             'roster_size': team.total_roster_size,
             'competition_score': round(competition_score, 3),
             'high_need_positions': high_need_positions,
