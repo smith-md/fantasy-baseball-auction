@@ -6,17 +6,16 @@
   display: flex;
   gap: 2rem;
   padding: 0.75rem;
-  background: #e3f2fd;
-  border-radius: 4px;
+  border: 1px solid #ddd;
   margin-bottom: 1rem;
 }
 
 .status-item {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .status-item strong {
-  color: #1976d2;
+  color: #000;
   margin-right: 0.5rem;
 }
 
@@ -29,16 +28,12 @@
 .no-needs {
   padding: 2rem;
   text-align: center;
-  background: #e8f5e9;
-  border-radius: 4px;
-  color: #2e7d32;
+  border: 1px solid #ddd;
   font-weight: 600;
 }
 
 .need-card {
   border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
   overflow: hidden;
 }
 
@@ -47,7 +42,6 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: #f5f5f5;
   border-bottom: 1px solid #ddd;
 }
 
@@ -57,9 +51,8 @@
 }
 
 .category-name {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: #2c3e50;
 }
 
 .category-rank {
@@ -88,21 +81,18 @@
   font-size: 1.2rem;
   font-weight: bold;
   padding: 0.25rem 0.75rem;
-  border-radius: 4px;
 }
 
 .ease-score.score-0,
 .ease-score.score-1,
 .ease-score.score-2 {
-  background: #ffebee;
-  color: #c62828;
+  color: #000;
 }
 
 .ease-score.score-3,
 .ease-score.score-4,
 .ease-score.score-5 {
-  background: #fff3e0;
-  color: #e65100;
+  color: #000;
 }
 
 .ease-score.score-6,
@@ -110,14 +100,12 @@
 .ease-score.score-8,
 .ease-score.score-9,
 .ease-score.score-10 {
-  background: #e8f5e9;
-  color: #2e7d32;
+  color: #000;
 }
 
 .stats-needed {
   font-size: 1.2rem;
   font-weight: bold;
-  color: #2c3e50;
 }
 
 .recommendations {
@@ -127,8 +115,7 @@
 .recommendations h4 {
   margin-top: 0;
   margin-bottom: 0.5rem;
-  color: #2c3e50;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .recommendations-table {
@@ -138,11 +125,10 @@
 }
 
 .recommendations-table th {
-  background: #ecf0f1;
+  background: #f0f0f0;
   padding: 0.4rem;
   text-align: left;
   font-weight: 600;
-  color: #2c3e50;
 }
 
 .recommendations-table td {
@@ -161,23 +147,21 @@
 
 .category-sgp {
   font-weight: 600;
-  color: #1976d2;
 }
 
 .total-sgp {
-  color: #555;
+  color: #333;
 }
 
 .best-targets-section {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
-  border-top: 2px solid #ddd;
+  border-top: 1px solid #333;
 }
 
 .best-targets-section h3 {
   margin-top: 0;
   margin-bottom: 0.25rem;
-  color: #2c3e50;
 }
 
 .section-subtitle {
@@ -189,29 +173,28 @@
 .targets-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .targets-table thead th {
-  background: #2c3e50;
-  color: white;
-  padding: 0.5rem;
+  background: #333;
+  color: #fff;
+  padding: 0.4rem 0.5rem;
   text-align: left;
   font-weight: 600;
 }
 
 .targets-table tbody td {
-  padding: 0.5rem;
+  padding: 0.4rem 0.5rem;
   border-bottom: 1px solid #eee;
 }
 
 .targets-table tbody tr:hover {
-  background: #f9f9f9;
+  background: #f5f5f5;
 }
 
 .need-sgp {
   font-weight: 600;
-  color: #2e7d32;
 }
 
 .addresses-categories {

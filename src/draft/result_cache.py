@@ -144,11 +144,15 @@ class ResultCache:
         for player in players:
             # Convert numpy types to Python types
             for key, value in player.items():
-                if pd.isna(value):
-                    player[key] = None
-                elif isinstance(value, (pd.Int64Dtype, pd.Float64Dtype)):
-                    player[key] = float(value) if value is not None else None
-                elif hasattr(value, 'item'):  # numpy types
+                if isinstance(value, (list, dict)):
+                    continue
+                try:
+                    if pd.isna(value):
+                        player[key] = None
+                        continue
+                except (ValueError, TypeError):
+                    pass
+                if hasattr(value, 'item'):  # numpy types
                     player[key] = value.item()
 
         return players

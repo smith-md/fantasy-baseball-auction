@@ -43,9 +43,9 @@ export const fetchConfig = async (): Promise<DraftConfig> => {
 export const fetchAllData = async () => {
   const [results, standings, competition, teamNeeds, config] = await Promise.all([
     fetchResults(),
-    fetchStandings(),
-    fetchCompetition(),
-    fetchTeamNeeds(),
+    fetchStandings().catch(() => null),
+    fetchCompetition().catch(() => null),
+    fetchTeamNeeds().catch(() => null),
     fetchConfig(),
   ]);
 

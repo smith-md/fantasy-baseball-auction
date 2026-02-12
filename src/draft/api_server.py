@@ -7,6 +7,7 @@ Provides HTTP endpoints to start, stop, pause, resume, and monitor draft session
 import logging
 from pathlib import Path
 from typing import Optional, Dict
+import pandas as pd
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -295,7 +296,7 @@ def get_projected_standings():
                 detail="No active session. Start a session first to calculate standings."
             )
 
-        league_state = session_manager._engine.draft_state_manager.league_state
+        league_state = session_manager._engine.state_manager.state
 
         # Calculate standings with user team marked
         standings = calculate_projected_standings(
@@ -342,7 +343,7 @@ def get_competition_metrics():
                 detail="No active session. Start a session first to view competition."
             )
 
-        league_state = session_manager._engine.draft_state_manager.league_state
+        league_state = session_manager._engine.state_manager.state
 
         # Calculate competition metrics with user team marked
         metrics = calculate_competition_metrics(
@@ -393,7 +394,7 @@ def get_team_needs(team_id: Optional[str] = None):
         # Use provided team_id or default to USER_TEAM_ID
         target_team_id = team_id or config.USER_TEAM_ID
 
-        league_state = session_manager._engine.draft_state_manager.league_state
+        league_state = session_manager._engine.state_manager.state
 
         # Check that team exists
         if target_team_id not in league_state.teams:
@@ -403,8 +404,12 @@ def get_team_needs(team_id: Optional[str] = None):
             )
 
         # Get available players from engine
-        available_players_df = session_manager._engine.draft_state_manager.get_available_players(
-            session_manager._engine.all_players_df
+        all_players_df = pd.concat([
+            session_manager._engine.base_hitters_df,
+            session_manager._engine.base_pitchers_df
+        ], ignore_index=True)
+        available_players_df = session_manager._engine.state_manager.get_available_players(
+            all_players_df
         )
 
         # Calculate standings (needed for team needs analysis)

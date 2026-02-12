@@ -71,7 +71,7 @@ Press Ctrl+C to stop.
 Updated automatically on each pick. Contains:
 ```json
 {
-  "timestamp": "2025-03-15T14:23:45Z",
+  "timestamp": "2026-03-15T14:23:45Z",
   "last_pick": 42,
   "available_budget": 4200,
   "available_roster_spots": 246,
@@ -96,7 +96,7 @@ You can read this file from a web UI, Excel, or any other tool.
 
 Append-only log of all draft picks. One JSON object per line:
 ```json
-{"pick_number": 1, "player_id": "sa01227", "player_name": "Juan Soto", "team_id": "team_05", "price": 52, "timestamp": "2025-03-15T14:23:45Z"}
+{"pick_number": 1, "player_id": "sa01227", "player_name": "Juan Soto", "team_id": "team_05", "price": 52, "timestamp": "2026-03-15T14:23:45Z"}
 ```
 
 This enables crash recovery and draft replay.
@@ -190,7 +190,7 @@ Test the system with a past draft:
 from src.draft.event_store import DraftEventStore
 from pathlib import Path
 
-store = DraftEventStore(Path('data/draft_events/draft_xyz_20250315.jsonl'))
+store = DraftEventStore(Path('data/draft_events/draft_xyz_20260315.jsonl'))
 final_state = store.replay_events()
 print(f"Final state: {final_state.total_picks()} picks")
 ```

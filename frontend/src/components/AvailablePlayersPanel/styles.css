@@ -8,27 +8,25 @@
   align-items: center;
   margin-bottom: 1rem;
   padding: 0.5rem;
-  background: #f5f5f5;
-  border-radius: 4px;
+  border: 1px solid #ddd;
 }
 
 .filters label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .filters select,
 .filters input {
   padding: 0.25rem 0.5rem;
   border: 1px solid #ccc;
-  border-radius: 3px;
 }
 
 .player-count {
   margin-left: auto;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #666;
 }
 
@@ -47,9 +45,9 @@
 .players-table th {
   position: sticky;
   top: 0;
-  background: #2c3e50;
-  color: white;
-  padding: 0.5rem;
+  background: #333;
+  color: #fff;
+  padding: 0.4rem 0.5rem;
   text-align: left;
   font-weight: 600;
   white-space: nowrap;
@@ -62,38 +60,37 @@
 }
 
 .players-table th.sortable:hover {
-  background: #34495e;
+  background: #444;
 }
 
 .players-table th.sorted {
-  background: #1a252f;
+  background: #444;
+  text-decoration: underline;
 }
 
 .players-table td {
-  padding: 0.4rem 0.5rem;
+  padding: 0.35rem 0.5rem;
   border-bottom: 1px solid #eee;
 }
 
 .players-table tbody tr:hover {
-  background: #f9f9f9;
+  background: #f5f5f5;
 }
 
 .player-name {
   font-weight: 500;
 }
 
-.personal-value {
-  background: #e8f5e9 !important;
+td.personal-value {
   font-weight: 600;
 }
 
 .value-surplus {
-  background: #c8e6c9 !important;
-  color: #2e7d32;
+  font-weight: 600;
 }
 
 .category-sgp {
   text-align: center;
   font-size: 0.8rem;
-  color: #555;
+  color: #333;
 }
