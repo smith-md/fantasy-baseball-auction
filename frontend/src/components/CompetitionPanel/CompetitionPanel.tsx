@@ -28,10 +28,10 @@ export const CompetitionPanel: React.FC = () => {
         <thead>
           <tr>
             <th>Team</th>
-            <th>Budget</th>
-            <th>Open Slots</th>
-            <th>$/Slot</th>
-            <th>Competition</th>
+            <th style={{ textAlign: 'center' }}>Budget</th>
+            <th style={{ textAlign: 'center' }}>Open Slots</th>
+            <th style={{ textAlign: 'center' }}>$/Slot</th>
+            <th style={{ textAlign: 'center' }}>Competition</th>
             <th></th>
           </tr>
         </thead>
@@ -49,13 +49,13 @@ export const CompetitionPanel: React.FC = () => {
                 <td className={`budget-cell ${team.budget_remaining > 400 ? 'high-budget' : ''}`}>
                   {formatCurrency(team.budget_remaining)}
                 </td>
-                <td>{team.total_open_slots}</td>
-                <td>
+                <td className="open-slots-cell">{team.total_open_slots}</td>
+                <td className="dollar-slot-cell">
                   {team.total_open_slots > 0
                     ? formatCurrency(team.budget_remaining / team.total_open_slots)
                     : '-'}
                 </td>
-                <td>
+                <td className="competition-cell">
                   <div className="competition-bar">
                     <div
                       className="competition-fill"

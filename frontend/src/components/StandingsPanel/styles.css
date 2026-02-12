@@ -69,11 +69,13 @@
 
 .total-points-cell {
   font-weight: 600;
+  text-align: center;
 }
 
 .gap-cell {
   color: #666;
   font-size: 0.85rem;
+  text-align: center;
 }
 
 .expand-cell {
