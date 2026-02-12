@@ -12,13 +12,13 @@
 .standings-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .standings-table thead th {
-  background: #2c3e50;
-  color: white;
-  padding: 0.5rem;
+  background: #333;
+  color: #fff;
+  padding: 0.4rem 0.5rem;
   text-align: left;
   font-weight: 600;
 }
@@ -29,27 +29,26 @@
 }
 
 .standings-table tbody tr:hover {
-  background: #f9f9f9;
+  background: #f5f5f5;
 }
 
 .standings-table tbody tr.user-team {
-  background: #e3f2fd;
   font-weight: 600;
+  background: #f0f0f0;
 }
 
 .standings-table tbody tr.user-team:hover {
-  background: #bbdefb;
+  background: #e5e5e5;
 }
 
 .standings-table td {
-  padding: 0.5rem;
+  padding: 0.4rem 0.5rem;
 }
 
 .rank-cell {
   width: 50px;
   text-align: center;
   font-weight: 600;
-  color: #555;
 }
 
 .team-name-cell {
@@ -58,18 +57,18 @@
 
 .user-badge {
   display: inline-block;
-  background: #2196f3;
-  color: white;
-  font-size: 0.7rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 3px;
+  background: #333;
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
   margin-left: 0.5rem;
   font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .total-points-cell {
   font-weight: 600;
-  color: #2c3e50;
 }
 
 .gap-cell {
@@ -86,7 +85,7 @@
 
 .category-breakdown td {
   padding: 0 !important;
-  background: #f5f5f5 !important;
+  background: #fafafa !important;
 }
 
 .category-details {
@@ -96,22 +95,22 @@
 .category-details h4 {
   margin-top: 0;
   margin-bottom: 0.5rem;
-  color: #2c3e50;
+  color: #000;
 }
 
 .category-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
-  background: white;
+  background: #fff;
 }
 
 .category-table th {
-  background: #ecf0f1;
+  background: #f0f0f0;
   padding: 0.4rem;
   text-align: left;
   font-weight: 600;
-  color: #2c3e50;
+  color: #000;
 }
 
 .category-table td {
@@ -121,7 +120,6 @@
 
 .category-name {
   font-weight: 600;
-  color: #34495e;
 }
 
 .standings-summary {
@@ -129,9 +127,8 @@
   gap: 2rem;
   margin-top: 1rem;
   padding: 0.75rem;
-  background: #f5f5f5;
-  border-radius: 4px;
-  font-size: 0.9rem;
+  border: 1px solid #ddd;
+  font-size: 0.85rem;
 }
 
 .summary-stat {
@@ -141,9 +138,9 @@
 
 .summary-stat .label {
   font-weight: 600;
-  color: #555;
+  color: #666;
 }
 
 .summary-stat .value {
-  color: #2c3e50;
+  color: #000;
 }

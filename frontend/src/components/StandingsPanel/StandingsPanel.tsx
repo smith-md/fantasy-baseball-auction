@@ -96,17 +96,6 @@ export const StandingsPanel: React.FC = () => {
           ))}
         </tbody>
       </table>
-
-      <div className="standings-summary">
-        <div className="summary-stat">
-          <span className="label">Leader:</span>
-          <span className="value">{standings.summary.leader_team} ({standings.summary.leader_points.toFixed(1)} pts)</span>
-        </div>
-        <div className="summary-stat">
-          <span className="label">Point Spread:</span>
-          <span className="value">{standings.summary.point_spread.toFixed(1)} pts</span>
-        </div>
-      </div>
     </div>
   );
 };

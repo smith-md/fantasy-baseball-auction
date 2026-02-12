@@ -131,18 +131,32 @@ class FantraxClient:
         league_info = self.fetch_league_info()
 
         # Parse team mappings
-        teams = league_info.get('teams', [])
-        self.team_id_to_name = {
-            team['teamId']: team.get('teamName', team.get('ownerName', f"Team {team['teamId']}"))
-            for team in teams
-        }
+        # teamInfo is a dict keyed by team ID with 'name' and 'id' fields
+        team_info = league_info.get('teamInfo', {})
+        if team_info and isinstance(team_info, dict):
+            self.team_id_to_name = {
+                tid: info.get('name', f"Team {tid}")
+                for tid, info in team_info.items()
+            }
+        else:
+            # Fallback: try legacy format
+            teams = league_info.get('teams', [])
+            self.team_id_to_name = {
+                team['teamId']: team.get('teamName', team.get('ownerName', f"Team {team['teamId']}"))
+                for team in teams
+            }
 
         # Parse player mappings
-        players = league_info.get('players', [])
-        self.fantrax_player_to_name = {
-            player['playerId']: player['playerName']
-            for player in players
-        }
+        # playerInfo is a dict keyed by player ID with position/status info
+        player_info = league_info.get('playerInfo', {})
+        if player_info and isinstance(player_info, dict):
+            self.fantrax_player_to_name = {}  # playerInfo doesn't include names
+        else:
+            players = league_info.get('players', [])
+            self.fantrax_player_to_name = {
+                player['playerId']: player['playerName']
+                for player in players
+            }
 
         self._mappings_loaded = True
 

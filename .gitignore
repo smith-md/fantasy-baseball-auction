@@ -38,8 +38,7 @@ htmlcov/
 *~
 
 # Project specific
-data/cache/
-data/output/
+data/
 *.csv
 
 # OS

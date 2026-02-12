@@ -36,7 +36,7 @@ class TeamStandingResponse(BaseModel):
     team_id: str
     team_name: str
     total_roto_points: float
-    categories: Dict[str, int] = Field(description="Category roto points (integers)")
+    categories: Dict[str, float] = Field(description="Category roto points")
 
 
 class StandingsResponse(BaseModel):
@@ -187,9 +187,9 @@ def serialize_standings(
     teams = []
 
     for standing in standings:
-        # Convert category_points to integers per contract
-        category_points_int = {
-            cat: int(points)
+        # Round category points to 1 decimal (ties produce fractional points like 6.5)
+        category_points = {
+            cat: round(points, 1)
             for cat, points in standing['category_points'].items()
         }
 
@@ -197,7 +197,7 @@ def serialize_standings(
             team_id=standing['team_id'],
             team_name=standing['team_name'],
             total_roto_points=round(standing['total_points'], 1),
-            categories=category_points_int
+            categories=category_points
         ))
 
     # Already sorted by total_points in standings_calculator, but ensure

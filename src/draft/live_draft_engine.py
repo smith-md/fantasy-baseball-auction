@@ -33,9 +33,13 @@ from ..position_optimizer import optimize_positions
 from ..replacement_calculator import calculate_replacement_and_var
 from ..dollar_allocator import allocate_dollars
 from ..keeper_handler import process_keepers
+from ..sgp.replacement_baseline import calculate_replacement_baseline
 
-from .draft_event import DraftEvent, create_initial_league_state
-from .draft_state_manager import DraftStateManager
+from .draft_event import DraftEvent  # Keep for compatibility with event_store
+from .league_schema import create_initial_league_state_v2
+from .draft_state_manager_v2 import DraftStateManagerV2
+from .player_pool_manager import PlayerPoolManager
+from .replacement_state_calculator import ReplacementStateCalculator
 from .fantrax_client import FantraxClient
 from .event_store import DraftEventStore, create_session_filepath
 from .result_cache import ResultCache
@@ -74,7 +78,7 @@ class LiveDraftEngine:
 
         # Components (initialized in initialize())
         self.fantrax_client = FantraxClient(league_id=league_id, api_key=api_key)
-        self.state_manager: Optional[DraftStateManager] = None
+        self.state_manager: Optional[DraftStateManagerV2] = None
         self.event_store: Optional[DraftEventStore] = None
         self.result_cache: Optional[ResultCache] = None
 
@@ -137,24 +141,58 @@ class LiveDraftEngine:
         # Setup result cache
         self.result_cache = ResultCache(cache_dir=Path(config.DRAFT_CACHE_DIR))
 
-        # Initialize or resume league state
+        # Initialize player pool from projections (v2 schema)
+        logger.info("Initializing player pool...")
+        player_pool_manager = PlayerPoolManager()
+        players_dict = player_pool_manager.initialize_player_pool(
+            self.base_hitters_df,
+            self.base_pitchers_df
+        )
+
+        # Initialize or resume league state (v2)
         existing_events = self.event_store.load_all_events()
 
-        if existing_events:
+        # Check for existing checkpoint
+        checkpoint_dir = Path(config.DRAFT_CHECKPOINTS_DIR)
+        checkpoint_file = checkpoint_dir / f"state_{self.league_id}.json"
+
+        if checkpoint_file.exists() or checkpoint_file.with_suffix('.json.gz').exists():
+            logger.info("Loading from checkpoint...")
+            self.state_manager = DraftStateManagerV2.load_checkpoint(
+                checkpoint_file,
+                self.base_hitters_df,
+                self.base_pitchers_df,
+                league_id=self.league_id
+            )
+        elif existing_events:
             logger.info(f"Resuming from {len(existing_events)} existing events")
-            initial_state = create_initial_league_state(
+            initial_state = create_initial_league_state_v2(
+                league_id=self.league_id,
+                players=players_dict,
                 num_teams=self.num_teams,
+                budget_per_team=config.BUDGET_PER_TEAM,
                 team_names=self.fantrax_client.team_id_to_name
             )
-            self.state_manager = DraftStateManager(initial_state)
+            self.state_manager = DraftStateManagerV2(
+                initial_state,
+                self.base_hitters_df,
+                self.base_pitchers_df
+            )
             self.state_manager.apply_events(existing_events)
         else:
             logger.info("Starting fresh draft session")
-            initial_state = create_initial_league_state(
+            initial_state = create_initial_league_state_v2(
+                league_id=self.league_id,
+                players=players_dict,
                 num_teams=self.num_teams,
+                budget_per_team=config.BUDGET_PER_TEAM,
                 team_names=self.fantrax_client.team_id_to_name
             )
-            self.state_manager = DraftStateManager(initial_state)
+            self.state_manager = DraftStateManagerV2(
+                initial_state,
+                self.base_hitters_df,
+                self.base_pitchers_df
+            )
 
         # Process keepers if provided
         if self.keepers_file:
@@ -167,9 +205,10 @@ class LiveDraftEngine:
         initial_valuations = self.run_valuation_pipeline()
         self.last_valuation_time = time.time() - start_time
 
+        total_budget_remaining = sum(t.budget_remaining for t in self.state_manager.state.teams.values())
         logger.info(
             f"Initial valuation complete: {len(initial_valuations)} players "
-            f"(${self.state_manager.state.available_budget} available) "
+            f"(${total_budget_remaining:.0f} available) "
             f"[{self.last_valuation_time:.2f}s]"
         )
 
@@ -245,6 +284,24 @@ class LiveDraftEngine:
             # Step 7: Calculate replacement and VAR
             assignments_df = calculate_replacement_and_var(assignments_df)
 
+            # Step 7b: Calculate and store ReplacementState (v2 schema)
+            # Get available players (undrafted)
+            available_hitters = self.state_manager.get_available_players(hitters_df)
+            available_pitchers = self.state_manager.get_available_players(pitchers_df)
+
+            # Calculate replacement baselines
+            hitter_baseline = calculate_replacement_baseline(available_hitters, 'hitters')
+            pitcher_baseline = calculate_replacement_baseline(available_pitchers, 'pitchers')
+
+            # Convert to ReplacementState and store in LeagueState
+            replacement_state = ReplacementStateCalculator.calculate_replacement_state(
+                hitter_baseline,
+                pitcher_baseline,
+                available_hitters,
+                available_pitchers
+            )
+            self.state_manager.state.replacement = replacement_state
+
             # Step 8: Allocate dollars
             assignments_df = allocate_dollars(
                 assignments_df,
@@ -314,9 +371,10 @@ class LiveDraftEngine:
         updated_valuations = self.run_valuation_pipeline()
         self.last_valuation_time = time.time() - start_time
 
+        total_budget_remaining = sum(t.budget_remaining for t in self.state_manager.state.teams.values())
         logger.info(
             f"Valuation complete: {len(updated_valuations)} players, "
-            f"${self.state_manager.state.available_budget} available "
+            f"${total_budget_remaining:.0f} available "
             f"[{self.last_valuation_time:.2f}s]"
         )
 
@@ -332,7 +390,8 @@ class LiveDraftEngine:
     def run_live_session(
         self,
         duration_minutes: Optional[int] = None,
-        output_callback: Optional[Callable] = None
+        output_callback: Optional[Callable] = None,
+        should_poll_callback: Optional[Callable[[], bool]] = None
     ) -> None:
         """
         Main event loop for live draft session.
@@ -341,6 +400,9 @@ class LiveDraftEngine:
             duration_minutes: Run for N minutes (None = run until interrupted)
             output_callback: Optional function to call with each new valuation
                            Signature: callback(valuations_df, league_state)
+            should_poll_callback: Optional callback to check if polling should occur
+                                Returns True to poll, False to pause
+                                Enables external control (e.g., SessionManager)
 
         The loop polls Fantrax every poll_interval seconds and processes
         new draft events. Press Ctrl+C to stop gracefully.
@@ -355,10 +417,11 @@ class LiveDraftEngine:
         logger.info("="*60)
         logger.info("STARTING LIVE DRAFT POLLING")
         logger.info("="*60)
+        total_budget_remaining = sum(t.budget_remaining for t in self.state_manager.state.teams.values())
         logger.info(f"League: {self.league_id}")
         logger.info(f"Poll interval: {self.poll_interval}s")
         logger.info(f"Current state: {self.state_manager.state.total_picks()} picks, "
-                   f"${self.state_manager.state.available_budget} available")
+                   f"${total_budget_remaining:.0f} available")
         logger.info("Press Ctrl+C to stop")
         logger.info("="*60)
 
@@ -372,6 +435,11 @@ class LiveDraftEngine:
                 if elapsed_minutes >= duration_minutes:
                     logger.info(f"Duration limit reached ({duration_minutes} minutes)")
                     break
+
+            # Check if external controller wants to pause
+            if should_poll_callback and not should_poll_callback():
+                time.sleep(1)  # Sleep briefly and check again
+                continue
 
             # Poll for updates
             poll_count += 1
@@ -394,19 +462,20 @@ class LiveDraftEngine:
 
         # Cleanup
         self.session_active = False
+        total_budget_remaining = sum(t.budget_remaining for t in self.state_manager.state.teams.values())
         logger.info("="*60)
         logger.info("LIVE DRAFT SESSION ENDED")
         logger.info("="*60)
         logger.info(f"Final state: {self.state_manager.state.total_picks()} picks, "
-                   f"${self.state_manager.state.available_budget} remaining")
+                   f"${total_budget_remaining:.0f} remaining")
         logger.info(f"Total polls: {poll_count}")
         logger.info(f"Average valuation time: {self.last_valuation_time:.2f}s")
         logger.info("="*60)
 
     def save_checkpoint(self) -> None:
-        """Save current state to checkpoint file."""
+        """Save current state to checkpoint file (v2 with compression)."""
         checkpoint_dir = Path(config.DRAFT_CHECKPOINTS_DIR)
-        checkpoint_file = checkpoint_dir / f"state_{self.league_id}_pick{self.state_manager.state.last_processed_pick}.json"
+        checkpoint_file = checkpoint_dir / f"state_{self.league_id}.json"
 
         self.state_manager.save_checkpoint(checkpoint_file)
 

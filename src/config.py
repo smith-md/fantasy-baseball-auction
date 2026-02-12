@@ -34,19 +34,12 @@ TOTAL_HITTERS = NUM_TEAMS * HITTERS_PER_TEAM  # 156
 TOTAL_PITCHERS = NUM_TEAMS * PITCHERS_PER_TEAM  # 132
 TOTAL_PLAYERS = NUM_TEAMS * ROSTER_SIZE  # 288
 
-# Roster slots for position assignment optimization
-# Expand multi-position slots (OF, UTIL, P, BN) into individual slots
+# Per-team roster slots (used for team state tracking)
+ROSTER_SLOTS_PER_TEAM = {**HITTER_ROSTER, **PITCHER_ROSTER}
+
+# League-wide roster slots for position assignment optimization
 ROSTER_SLOTS = {
-    'C': NUM_TEAMS * HITTER_ROSTER['C'],      # 12
-    '1B': NUM_TEAMS * HITTER_ROSTER['1B'],    # 12
-    '2B': NUM_TEAMS * HITTER_ROSTER['2B'],    # 12
-    '3B': NUM_TEAMS * HITTER_ROSTER['3B'],    # 12
-    'SS': NUM_TEAMS * HITTER_ROSTER['SS'],    # 12
-    'OF': NUM_TEAMS * HITTER_ROSTER['OF'],    # 36
-    'UTIL': NUM_TEAMS * HITTER_ROSTER['UTIL'], # 36
-    'BN_H': NUM_TEAMS * HITTER_ROSTER['BN_H'], # 24
-    'P': NUM_TEAMS * PITCHER_ROSTER['P'],     # 96
-    'BN_P': NUM_TEAMS * PITCHER_ROSTER['BN_P'], # 36
+    pos: NUM_TEAMS * count for pos, count in ROSTER_SLOTS_PER_TEAM.items()
 }
 
 # Scoring Categories
@@ -67,7 +60,7 @@ COMPOUND_CATEGORIES = {
 FANGRAPHS_BASE_URL = "https://www.fangraphs.com/api/projections"
 
 # Projection systems to fetch
-# Using all available UNIQUE systems for 2025: steamer, fangraphsdc
+# Using all available UNIQUE systems for 2026: steamer, fangraphsdc
 # Note: steamer600 is excluded as it's just steamer scaled to 600 PA
 PROJECTION_SYSTEMS = ['steamer', 'fangraphsdc']
 
@@ -193,7 +186,7 @@ SESSION_TIMEOUT_HOURS = 12   # Auto-expire sessions after 12 hours (future featu
 # ===== FRONTEND CONFIGURATION =====
 
 # User Team ID - Change this to match your team in the league
-USER_TEAM_ID = 'team_01'
+USER_TEAM_ID = 'jp9m7ovmml34g0kb'
 
 # Auto-refresh interval for frontend (seconds)
 FRONTEND_AUTO_REFRESH_INTERVAL = 10

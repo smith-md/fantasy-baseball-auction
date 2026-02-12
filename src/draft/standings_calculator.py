@@ -47,16 +47,16 @@ def add_replacement_stats(team_stats: TeamStats, replacement: ReplacementProfile
     return new_stats
 
 
-def rank_teams_by_category(teams_data: List[Dict], categories: List[str]) -> Dict[str, Dict[str, int]]:
+def rank_teams_by_category(teams_data: List[Dict], categories: List[str]) -> Dict[str, Dict[str, float]]:
     """
-    Rank teams by each category.
+    Rank teams by each category. Tied teams share the average rank.
 
     Args:
         teams_data: List of team dicts with projected_stats
         categories: List of category names to rank
 
     Returns:
-        Dict mapping team_id -> {category -> rank (1-12)}
+        Dict mapping team_id -> {category -> rank} (ties get averaged rank, e.g. 6.5)
     """
     ranks = {team['team_id']: {} for team in teams_data}
 
@@ -71,9 +71,20 @@ def rank_teams_by_category(teams_data: List[Dict], categories: List[str]) -> Dic
         reverse = category not in ['ERA', 'WHIP']
         team_values.sort(key=lambda x: x[1], reverse=reverse)
 
-        # Assign ranks (1 = best)
-        for rank_idx, (team_id, value) in enumerate(team_values, start=1):
-            ranks[team_id][category] = rank_idx
+        # Assign ranks with tie handling (tied teams share avg rank)
+        i = 0
+        while i < len(team_values):
+            # Find all teams tied at this value
+            j = i + 1
+            while j < len(team_values) and team_values[j][1] == team_values[i][1]:
+                j += 1
+
+            # Average rank for tied positions (1-indexed)
+            avg_rank = (i + 1 + j) / 2.0
+            for k in range(i, j):
+                ranks[team_values[k][0]][category] = avg_rank
+
+            i = j
 
     return ranks
 
