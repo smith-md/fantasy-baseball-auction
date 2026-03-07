@@ -36,11 +36,14 @@ class ReplacementCalculator:
         """
         print("\nCalculating replacement levels...")
 
+        # Only rostered players define replacement level -- fringe players are excluded
+        rostered = self.assignments_df[self.assignments_df.get('is_rostered', True) != False]
+
         # Group by assigned position and find minimum raw_value
         # The minimum raw_value represents the replacement level for that position
         for position in config.ROSTER_SLOTS.keys():
-            position_players = self.assignments_df[
-                self.assignments_df['assigned_position'] == position
+            position_players = rostered[
+                rostered['assigned_position'] == position
             ]
 
             if len(position_players) > 0:

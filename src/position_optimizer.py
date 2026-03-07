@@ -145,12 +145,14 @@ class PositionOptimizer:
 
                 self.remaining_slots[best_position] -= 1
                 assignments_made += 1
+                is_rostered = True
             else:
                 # Fringe assignment -- beyond real roster slots, no slot tracking
                 if player_id in self.assigned_player_ids:
                     continue
                 best_position = default_fringe_position
                 fringe_assigned += 1
+                is_rostered = False
 
             self.assignments.append({
                 'player_id': player_id,
@@ -159,6 +161,7 @@ class PositionOptimizer:
                 'positions': positions,
                 'assigned_position': best_position,
                 'raw_value': player['raw_value'],
+                'is_rostered': is_rostered,
             })
             self.assigned_player_ids.add(player_id)
 
