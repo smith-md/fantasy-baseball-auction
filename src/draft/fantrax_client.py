@@ -95,6 +95,102 @@ class FantraxClient:
         except requests.RequestException as e:
             logger.error(f"Failed to fetch league info: {e}")
             raise
+    def fetch_rosters(self) -> Dict:
+        """
+        Fetch all team rosters from Fantrax, including salary/contract data.
+
+        Returns:
+            Raw JSON response from Fantrax getTeamRosters endpoint
+        """
+        endpoint = f"{self.base_url}/getTeamRosters"
+        params = {'leagueId': self.league_id}
+
+        try:
+            response = self._make_request(endpoint, params)
+            logger.info(f"Fetched team rosters from Fantrax")
+            return response
+        except requests.RequestException as e:
+            logger.error(f"Failed to fetch team rosters: {e}")
+            raise
+
+    def parse_rosters_to_keepers(
+        self,
+        raw_data: Dict,
+        fangraphs_players_df=None
+    ) -> List[Dict]:
+        """
+        Parse getTeamRosters response into keeper records.
+
+        Each record contains:
+            player_id   - FanGraphs player ID (fuzzy matched from name)
+            player_name - Player name from Fantrax
+            team_id     - Fantrax team ID
+            team_name   - Team name
+            keeper_salary - Salary from Fantrax contract data
+
+        Args:
+            raw_data: Raw JSON from getTeamRosters endpoint
+            fangraphs_players_df: FanGraphs projections for player ID matching
+
+        Returns:
+            List of keeper dicts ready for KeeperInitializer
+        """
+        keepers = []
+
+        # Log top-level keys to help diagnose unexpected formats
+        logger.info(f"getTeamRosters response keys: {list(raw_data.keys())}")
+
+        # Fantrax typically nests rosters under 'rosters' or 'teamRosters'
+        roster_data = raw_data.get('rosters', raw_data.get('teamRosters', {}))
+
+        if not roster_data:
+            logger.warning(
+                f"Could not find roster data in response. "
+                f"Full response keys: {list(raw_data.keys())}. "
+                f"Dumping raw response for inspection."
+            )
+            import json
+            logger.warning(json.dumps(raw_data, indent=2)[:3000])
+            return []
+
+        for team_id, team_data in roster_data.items():
+            team_name = self.team_id_to_name.get(team_id, team_data.get('name', team_id))
+
+            # Players may be under 'rosterItems', 'players', or similar
+            players = (
+                team_data.get('rosterItems') or
+                team_data.get('players') or
+                team_data.get('roster') or
+                []
+            )
+
+            for player in players:
+                player_name = player.get('name', player.get('playerName', ''))
+                salary = player.get('salary', player.get('contractSalary', player.get('cost', 0)))
+
+                if not player_name:
+                    continue
+
+                # Only include players with a non-zero salary (actual keepers)
+                if not salary or salary == 0:
+                    logger.debug(f"Skipping {player_name} (no salary)")
+                    continue
+
+                # Fuzzy match to FanGraphs player ID
+                fangraphs_id = self._match_to_fangraphs(player_name, fangraphs_players_df)
+
+                keepers.append({
+                    'player_id': fangraphs_id,
+                    'player_name': player_name,
+                    'team_id': team_id,
+                    'team_name': team_name,
+                    'keeper_salary': float(salary),
+                })
+
+        logger.info(f"Parsed {len(keepers)} keepers from Fantrax rosters")
+        return keepers
+
+
 
     def load_mappings(self, force_refresh: bool = False) -> None:
         """

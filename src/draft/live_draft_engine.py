@@ -36,7 +36,7 @@ from ..keeper_handler import process_keepers
 from ..sgp.replacement_baseline import calculate_replacement_baseline
 
 from .draft_event import DraftEvent  # Keep for compatibility with event_store
-from .league_schema import create_initial_league_state_v2
+from .league_schema import create_initial_league_state_v2, DraftEvent
 from .draft_state_manager_v2 import DraftStateManagerV2
 from .player_pool_manager import PlayerPoolManager
 from .replacement_state_calculator import ReplacementStateCalculator
@@ -133,6 +133,14 @@ class LiveDraftEngine:
         logger.info("Fetching team/player mappings from Fantrax...")
         self.fantrax_client.load_mappings()
 
+        # Fetch rosters from Fantrax for keeper initialization
+        logger.info("Fetching team rosters from Fantrax...")
+        self.fantrax_rosters_raw: Optional[Dict] = None
+        try:
+            self.fantrax_rosters_raw = self.fantrax_client.fetch_rosters()
+        except Exception as e:
+            logger.warning(f"Could not fetch rosters from Fantrax: {e}. Keepers will not be loaded.")
+
         # Setup event store
         event_file = create_session_filepath(
             base_dir=Path(config.DRAFT_EVENTS_DIR),
@@ -211,7 +219,11 @@ class LiveDraftEngine:
                 self.base_pitchers_df
             )
 
-        # Process keepers if provided
+            # Apply Fantrax roster keepers if available
+            if self.fantrax_rosters_raw:
+                self._apply_fantrax_keepers()
+
+        # Process keepers if provided (legacy file-based fallback)
         if self.keepers_file:
             logger.info(f"Loading keepers from {self.keepers_file}")
             # Keepers will be processed in first valuation run
@@ -239,6 +251,49 @@ class LiveDraftEngine:
 
         self.session_active = True
         logger.info("Live draft session initialized")
+
+
+    def _apply_fantrax_keepers(self) -> None:
+        """
+        Parse Fantrax roster data and apply keepers to the initial league state.
+
+        Called once on a fresh session start. Keepers are applied as pick_number=0
+        DraftEvents so they are reflected in team rosters and budgets before the
+        auction begins.
+        """
+        import pandas as pd
+
+        fangraphs_df = pd.concat([self.base_hitters_df, self.base_pitchers_df])
+
+        keepers = self.fantrax_client.parse_rosters_to_keepers(
+            self.fantrax_rosters_raw,
+            fangraphs_players_df=fangraphs_df
+        )
+
+        if not keepers:
+            logger.warning("No keepers parsed from Fantrax rosters -- check response structure in logs")
+            return
+
+        keeper_events = []
+        for k in keepers:
+            event = DraftEvent(
+                pick_number=0,
+                player_id=k['player_id'],
+                player_name=k['player_name'],
+                team_id=k['team_id'],
+                price=k['keeper_salary'],
+                timestamp=__import__('datetime').datetime.now(),
+                assigned_position=None
+            )
+            keeper_events.append(event)
+
+        logger.info(f"Applying {len(keeper_events)} Fantrax keepers to league state...")
+        try:
+            self.state_manager.apply_events(keeper_events)
+            total_cost = sum(e.price for e in keeper_events)
+            logger.info(f"Keepers applied: ${total_cost:.0f} total salary committed")
+        except Exception as e:
+            logger.error(f"Failed to apply Fantrax keepers: {e}", exc_info=True)
 
     def run_valuation_pipeline(self) -> pd.DataFrame:
         """
