@@ -36,16 +36,21 @@ class DollarAllocator:
         """
         Calculate dynamic hitter/pitcher dollar split based on VAR.
 
+        Only players with positive VAR (above replacement) are included.
+        Fringe players below replacement level don't affect the split.
+
         Returns:
             Tuple of (hitter_dollars, pitcher_dollars)
         """
-        # Calculate total VAR for hitters and pitchers
+        # Calculate total VAR for hitters and pitchers (positive VAR only)
         hitter_var = self.assignments_df[
-            self.assignments_df['player_type'] == 'hitter'
+            (self.assignments_df['player_type'] == 'hitter') &
+            (self.assignments_df['VAR'] > 0)
         ]['VAR'].sum()
 
         pitcher_var = self.assignments_df[
-            self.assignments_df['player_type'] == 'pitcher'
+            (self.assignments_df['player_type'] == 'pitcher') &
+            (self.assignments_df['VAR'] > 0)
         ]['VAR'].sum()
 
         total_var = hitter_var + pitcher_var
@@ -84,24 +89,30 @@ class DollarAllocator:
         # Calculate auction value for each player
         auction_values = []
 
+        # Pre-compute positive VAR totals for each group (used in allocation formula)
+        hitter_var_total = self.assignments_df[
+            (self.assignments_df['player_type'] == 'hitter') &
+            (self.assignments_df['VAR'] > 0)
+        ]['VAR'].sum()
+        pitcher_var_total = self.assignments_df[
+            (self.assignments_df['player_type'] == 'pitcher') &
+            (self.assignments_df['VAR'] > 0)
+        ]['VAR'].sum()
+
         for _, player in self.assignments_df.iterrows():
             player_type = player['player_type']
             var = player['VAR']
 
-            if var == 0:
-                # Players with VAR = 0 get minimum bid
+            if var <= 0:
+                # Players at or below replacement get minimum bid
                 auction_value = config.MINIMUM_BID
             else:
-                # Get total VAR and allocated dollars for this player type
+                # Get total positive VAR and allocated dollars for this player type
                 if player_type == 'hitter':
-                    total_var = self.assignments_df[
-                        self.assignments_df['player_type'] == 'hitter'
-                    ]['VAR'].sum()
+                    total_var = hitter_var_total
                     group_dollars = hitter_dollars
                 else:  # pitcher
-                    total_var = self.assignments_df[
-                        self.assignments_df['player_type'] == 'pitcher'
-                    ]['VAR'].sum()
+                    total_var = pitcher_var_total
                     group_dollars = pitcher_dollars
 
                 if total_var == 0:
