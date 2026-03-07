@@ -112,8 +112,8 @@ TEAM_OWNER_YEAR = {
 }
 
 # Per-team starting budgets for 2026 draft
-# = base budget (500 + new owner bonus) +/- traded draft dollars
-# Must sum to TOTAL_BUDGET ($6000).
+# = trade-adjusted dollars + new owner year bonus (year 1: +$30, year 2: +$15)
+# Total is $6030 due to $15 new owner bonus for Dan and Zach (both year 2).
 TEAM_BUDGETS = {
     'ng253kq0ml34g0kc': 470,  # Jaylen Henderson - I hate this team
     '7d7oqo90ml34g0kc': 500,  # Mike Aitken - Runner's Super Heroes
@@ -121,12 +121,12 @@ TEAM_BUDGETS = {
     'n9dbhlzhml34g0kc': 600,  # Patrick Farrar - Bichette Happens
     '395i9u8sml34g0kb': 400,  # Glennon - Molly's team
     '1xckqbdaml34g0kc': 520,  # Harry Tate - Kalusari
-    '7oml65nsml34g0kb': 468,  # Zach - Zach
+    '7oml65nsml34g0kb': 483,  # Zach - Zach (468 trades + 15 year-2 bonus)
     'q1rxaitmml34g0kb': 490,  # Louis St. Clair - So Saint Louis
     'ne3s908zml34g0kb': 582,  # Ben Klobe - Yabo Bros
     'eozlzqo1ml34g0kb': 500,  # Dru Tate - The Disappointment
     'jp9m7ovmml34g0kb': 500,  # Mike Smith - The McLaniacs
-    '7bqu0ogpml34g0kc': 500,  # Dan Pers - Dan
+    '7bqu0ogpml34g0kc': 515,  # Dan Pers - Dan (500 trades + 15 year-2 bonus)
 }
 
 # Position eligibility mappings
