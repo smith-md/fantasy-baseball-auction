@@ -530,10 +530,11 @@ def create_initial_league_state_v2(
         team_entries = [(f"team_{i:02d}", f"Team {i}") for i in range(1, num_teams + 1)]
 
     for team_id, team_name in team_entries:
+        team_budget = config.TEAM_BUDGETS.get(team_id, budget_per_team)
         teams[team_id] = TeamState(
             team_id=team_id,
             team_name=team_name,
-            budget_total=budget_per_team,
+            budget_total=team_budget,
             budget_spent=0.0,
             roster={pos: [] for pos in config.ROSTER_SLOTS_PER_TEAM.keys()},
             open_slots=config.ROSTER_SLOTS_PER_TEAM.copy(),

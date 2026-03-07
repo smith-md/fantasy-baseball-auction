@@ -99,6 +99,36 @@ MINIMUM_BID = 1
 MINIMUM_SPEND = TOTAL_PLAYERS * MINIMUM_BID  # $288
 DOLLARS_TO_ALLOCATE = TOTAL_BUDGET - MINIMUM_SPEND  # $5712
 
+# New owner budget bonuses (added to base $500 before trades)
+NEW_OWNER_YEAR1_BONUS = 30  # Year 1 owners start with $530
+NEW_OWNER_YEAR2_BONUS = 15  # Year 2 owners start with $515
+
+# Tracks which year each team is in (for new owner bonus calculation)
+# Used to determine base budget before trade adjustments in future years.
+# Omit a team_id (or set to 3+) for veterans on the default $500 base.
+TEAM_OWNER_YEAR = {
+    '7bqu0ogpml34g0kc': 2,  # Dan Pers - year 2
+    '7oml65nsml34g0kb': 2,  # Zach - year 2
+}
+
+# Per-team starting budgets for 2026 draft
+# = base budget (500 + new owner bonus) +/- traded draft dollars
+# Must sum to TOTAL_BUDGET ($6000).
+TEAM_BUDGETS = {
+    'ng253kq0ml34g0kc': 470,  # Jaylen Henderson - I hate this team
+    '7d7oqo90ml34g0kc': 500,  # Mike Aitken - Runner's Super Heroes
+    'r140it80ml34g0kb': 470,  # Jake Esker - ATLiens
+    'n9dbhlzhml34g0kc': 600,  # Patrick Farrar - Bichette Happens
+    '395i9u8sml34g0kb': 400,  # Glennon - Molly's team
+    '1xckqbdaml34g0kc': 520,  # Harry Tate - Kalusari
+    '7oml65nsml34g0kb': 468,  # Zach - Zach
+    'q1rxaitmml34g0kb': 490,  # Louis St. Clair - So Saint Louis
+    'ne3s908zml34g0kb': 582,  # Ben Klobe - Yabo Bros
+    'eozlzqo1ml34g0kb': 500,  # Dru Tate - The Disappointment
+    'jp9m7ovmml34g0kb': 500,  # Mike Smith - The McLaniacs
+    '7bqu0ogpml34g0kc': 500,  # Dan Pers - Dan
+}
+
 # Position eligibility mappings
 # Define which positions are eligible for UTIL slots
 UTIL_ELIGIBLE_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'DH']
