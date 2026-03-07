@@ -99,6 +99,11 @@ MINIMUM_BID = 1
 MINIMUM_SPEND = TOTAL_PLAYERS * MINIMUM_BID  # $288
 DOLLARS_TO_ALLOCATE = TOTAL_BUDGET - MINIMUM_SPEND  # $5712
 
+# Total players in the draft pool — includes fringe players beyond actual roster slots.
+# Real roster spots = TOTAL_PLAYERS (288). Extra players get assigned a position for
+# valuation purposes but will have negative/near-zero dollar values.
+PLAYER_POOL_SIZE = 500
+
 # New owner budget bonuses (added to base $500 before trades)
 NEW_OWNER_YEAR1_BONUS = 30  # Year 1 owners start with $530
 NEW_OWNER_YEAR2_BONUS = 15  # Year 2 owners start with $515
