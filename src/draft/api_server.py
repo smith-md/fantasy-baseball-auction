@@ -7,7 +7,6 @@ Provides HTTP endpoints to start, stop, pause, resume, and monitor draft session
 import logging
 from pathlib import Path
 from typing import Optional, Dict
-import pandas as pd
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -403,13 +402,9 @@ def get_team_needs(team_id: Optional[str] = None):
                 detail=f"Team {target_team_id} not found in league state"
             )
 
-        # Get available players from engine
-        all_players_df = pd.concat([
-            session_manager._engine.base_hitters_df,
-            session_manager._engine.base_pitchers_df
-        ], ignore_index=True)
+        # Get available players from valuated DataFrame (has SGP columns)
         available_players_df = session_manager._engine.state_manager.get_available_players(
-            all_players_df
+            session_manager._engine.all_players_df
         )
 
         # Calculate standings (needed for team needs analysis)

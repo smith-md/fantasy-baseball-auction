@@ -31,7 +31,7 @@ export const TeamNeedsPanel: React.FC = () => {
       <div className="needs-list">
         {teamNeeds.needs.length === 0 ? (
           <div className="no-needs">
-            All categories at rank 1! No improvement opportunities.
+            Leading all categories — no improvement needed right now.
           </div>
         ) : (
           teamNeeds.needs.map(need => (
@@ -52,7 +52,9 @@ export const TeamNeedsPanel: React.FC = () => {
                   </div>
                   <div className="metric">
                     <span className="metric-label">Need to {need.stats_gap_type}</span>
-                    <span className="stats-needed">{need.stats_needed}</span>
+                    <span className="stats-needed">
+                      {need.stats_needed === 0 ? 'Any improvement helps' : need.stats_needed}
+                    </span>
                   </div>
                 </div>
               </div>

@@ -26,6 +26,8 @@
 .standings-table tbody tr {
   cursor: pointer;
   border-bottom: 1px solid #eee;
+  background-color: #fff;
+  color: #000;
 }
 
 .standings-table tbody tr:hover {
@@ -43,6 +45,7 @@
 
 .standings-table td {
   padding: 0.4rem 0.5rem;
+  color: #000;
 }
 
 .rank-cell {

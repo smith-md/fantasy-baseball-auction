@@ -20,6 +20,17 @@
 
 .filters select,
 .filters input {
+  font-size: 0.85rem;
+}
+
+.search-input {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ccc;
+  width: 160px;
+}
+
+.filters select,
+.filters input {
   padding: 0.25rem 0.5rem;
   border: 1px solid #ccc;
 }
@@ -34,6 +45,7 @@
   overflow-x: auto;
   max-height: 500px;
   overflow-y: auto;
+  color-scheme: light;
 }
 
 .players-table {
@@ -71,6 +83,12 @@
 .players-table td {
   padding: 0.35rem 0.5rem;
   border-bottom: 1px solid #eee;
+  color: #000;
+}
+
+.players-table tbody tr {
+  background-color: #fff;
+  color: #000;
 }
 
 .players-table tbody tr:hover {

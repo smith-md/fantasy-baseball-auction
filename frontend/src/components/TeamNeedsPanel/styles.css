@@ -134,6 +134,7 @@
 .recommendations-table td {
   padding: 0.4rem;
   border-bottom: 1px solid #eee;
+  color: #000;
 }
 
 .player-name {
@@ -187,6 +188,7 @@
 .targets-table tbody td {
   padding: 0.4rem 0.5rem;
   border-bottom: 1px solid #eee;
+  color: #000;
 }
 
 .targets-table tbody tr:hover {

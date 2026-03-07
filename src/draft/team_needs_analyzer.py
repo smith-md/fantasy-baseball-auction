@@ -33,6 +33,31 @@ def find_team_at_rank(standings: List[Dict], category: str, target_rank: int) ->
     return None
 
 
+def find_next_better_team(standings: List[Dict], category: str, current_rank: float, team_id: str) -> Dict:
+    """
+    Find nearest team ranked strictly better (lower rank number) than us.
+
+    Handles tied ranks (e.g., rank 6.5) where exact rank-1 lookup would fail.
+
+    Args:
+        standings: List of team standings
+        category: Category to check
+        current_rank: Our current rank (may be fractional due to ties)
+        team_id: Our team ID (to exclude from results)
+
+    Returns:
+        Team dict of the closest better-ranked team, or None if no one is better
+    """
+    better_teams = [
+        s for s in standings
+        if s['category_ranks'][category] < current_rank and s['team_id'] != team_id
+    ]
+    if not better_teams:
+        return None
+    # Return closest better team (highest rank among those better than us)
+    return max(better_teams, key=lambda s: s['category_ranks'][category])
+
+
 def calculate_ease_score(
     points_to_next: float,
     stats_gap: float,
@@ -53,18 +78,26 @@ def calculate_ease_score(
     Returns:
         Ease score (0-1, higher is easier)
     """
-    # If already in first place or no gap, can't improve
-    if points_to_next <= 0 or stats_gap <= 0:
+    # No available SGP means we can't improve
+    if available_sgp <= 0:
         return 0.0
 
-    # More available SGP relative to the gap = easier
-    sgp_ratio = min(available_sgp / stats_gap, 3.0) if stats_gap > 0 else 0
+    # No room to gain points and no stats gap — truly nothing to improve
+    if points_to_next <= 0 and stats_gap <= 0:
+        return 0.0
+
+    # Tied scenario: stats_gap == 0 but points_to_next > 0 means any improvement breaks the tie
+    if stats_gap == 0:
+        sgp_ratio = 3.0  # Max ratio — any stat improvement helps
+        gap_factor = 1.0  # No gap to close
+    else:
+        # More available SGP relative to the gap = easier
+        sgp_ratio = min(available_sgp / stats_gap, 3.0)
+        # Smaller gaps = easier to close
+        gap_factor = 1.0 / (1.0 + stats_gap / 10.0)  # Normalize around 10 stat units
 
     # More budget = easier to acquire players
     budget_factor = min(budget_remaining / 100.0, 3.0)  # Normalize around $100
-
-    # Smaller gaps = easier to close
-    gap_factor = 1.0 / (1.0 + stats_gap / 10.0)  # Normalize around 10 stat units
 
     # Combined score (weighted average)
     ease = (sgp_ratio * 0.4 + budget_factor * 0.3 + gap_factor * 0.3) / 3.0
@@ -166,27 +199,31 @@ def calculate_team_needs(
     for category in all_categories:
         current_rank = user_standing['category_ranks'][category]
 
-        # Skip if already in first place
+        # Skip if already sole first place
         if current_rank == 1:
             continue
 
-        # Find team one rank above
-        next_team = find_team_at_rank(standings, category, current_rank - 1)
-        if not next_team:
-            continue
+        # Find nearest team ranked better than us (handles ties)
+        next_team = find_next_better_team(standings, category, current_rank, team_id)
 
-        # Calculate stats gap
-        user_stat = user_standing['projected_stats'][category]
-        next_stat = next_team['projected_stats'][category]
+        if next_team:
+            # Normal case: someone is ranked better
+            user_stat = user_standing['projected_stats'][category]
+            next_stat = next_team['projected_stats'][category]
 
-        # For ERA/WHIP, lower is better (we want to reduce our stat)
-        if category in ['ERA', 'WHIP']:
-            stats_gap = user_stat - next_stat  # Positive gap means we need to reduce
+            # For ERA/WHIP, lower is better (we want to reduce our stat)
+            if category in ['ERA', 'WHIP']:
+                stats_gap = user_stat - next_stat
+            else:
+                stats_gap = next_stat - user_stat
+
+            # Points gap (how many roto points separate the ranks)
+            points_gap = next_team['category_points'][category] - user_standing['category_points'][category]
         else:
-            stats_gap = next_stat - user_stat  # Positive gap means we need to increase
-
-        # Points gap (how many roto points separate the ranks)
-        points_gap = next_team['category_points'][category] - user_standing['category_points'][category]
+            # Tied at top but not sole first (e.g., all teams rank 6.5)
+            # Any improvement breaks the tie and moves us toward sole 1st
+            stats_gap = 0
+            points_gap = current_rank - 1  # Roto points gained by reaching sole 1st
 
         # Find top available players for this category
         top_players = find_top_players_for_category(available_players_df, category, limit=5)
@@ -205,7 +242,7 @@ def calculate_team_needs(
         needs.append({
             'category': category,
             'current_rank': current_rank,
-            'next_rank': current_rank - 1,
+            'next_rank': current_rank - 1 if next_team else 1,
             'points_to_next_rank': points_gap,
             'stats_needed': round(abs(stats_gap), 2),
             'stats_gap_type': 'reduce' if category in ['ERA', 'WHIP'] else 'increase',

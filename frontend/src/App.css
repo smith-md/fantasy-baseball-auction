@@ -10,6 +10,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: #fff;
+  color: #000;
+  color-scheme: light;
 }
 
 .app {
@@ -151,8 +153,10 @@ body {
 /* Panel Base Styles */
 .panel {
   background: #fff;
+  color: #000;
   padding: 1.25rem;
   border: 1px solid #ddd;
+  color-scheme: light;
 }
 
 .panel h2 {

@@ -15,12 +15,19 @@ export const AvailablePlayersPanel: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterPosition, setFilterPosition] = useState<string>('');
   const [filterMinValue, setFilterMinValue] = useState<string>('');
+  const [searchName, setSearchName] = useState<string>('');
 
   const availablePlayers = useMemo(() => {
     if (!results) return [];
 
     // Filter to only undrafted players (no team)
     let players = results.players.filter(p => !p.team || p.team === '');
+
+    // Apply name search
+    if (searchName) {
+      const q = searchName.toLowerCase();
+      players = players.filter(p => p.player_name.toLowerCase().includes(q));
+    }
 
     // Apply position filter
     if (filterPosition) {
@@ -67,7 +74,7 @@ export const AvailablePlayersPanel: React.FC = () => {
     });
 
     return players;
-  }, [results, filterPosition, filterMinValue, sortField, sortDirection]);
+  }, [results, filterPosition, filterMinValue, sortField, sortDirection, searchName]);
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -103,6 +110,14 @@ export const AvailablePlayersPanel: React.FC = () => {
       <h2>Available Players</h2>
 
       <div className="filters">
+        <input
+          type="text"
+          className="search-input"
+          value={searchName}
+          onChange={e => setSearchName(e.target.value)}
+          placeholder="Search player..."
+        />
+
         <label>
           Position:
           <select value={filterPosition} onChange={e => setFilterPosition(e.target.value)}>
