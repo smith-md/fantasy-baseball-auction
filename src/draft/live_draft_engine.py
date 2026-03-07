@@ -86,6 +86,9 @@ class LiveDraftEngine:
         self.base_hitters_df: Optional[pd.DataFrame] = None
         self.base_pitchers_df: Optional[pd.DataFrame] = None
 
+        # Latest valuated DataFrame (with SGP columns, updated each pipeline run)
+        self.all_players_df: Optional[pd.DataFrame] = None
+
         # Session state
         self.session_active = False
         self.shutdown_requested = False
@@ -149,6 +152,18 @@ class LiveDraftEngine:
             self.base_pitchers_df
         )
 
+        # Load per-team budgets from settings file if present
+        import json
+        team_budgets = None
+        budgets_file = Path(config.DRAFT_BUDGETS_DIR) / f"draft_budgets_{self.season}.json"
+        if budgets_file.exists():
+            with open(budgets_file) as f:
+                budgets_data = json.load(f)
+            team_budgets = budgets_data.get('team_budgets')
+            logger.info(f"Loaded per-team budgets from {budgets_file}")
+        else:
+            logger.info(f"No budget file found at {budgets_file}, using default ${config.BUDGET_PER_TEAM}/team")
+
         # Initialize or resume league state (v2)
         existing_events = self.event_store.load_all_events()
 
@@ -171,7 +186,8 @@ class LiveDraftEngine:
                 players=players_dict,
                 num_teams=self.num_teams,
                 budget_per_team=config.BUDGET_PER_TEAM,
-                team_names=self.fantrax_client.team_id_to_name
+                team_names=self.fantrax_client.team_id_to_name,
+                team_budgets=team_budgets
             )
             self.state_manager = DraftStateManagerV2(
                 initial_state,
@@ -186,7 +202,8 @@ class LiveDraftEngine:
                 players=players_dict,
                 num_teams=self.num_teams,
                 budget_per_team=config.BUDGET_PER_TEAM,
-                team_names=self.fantrax_client.team_id_to_name
+                team_names=self.fantrax_client.team_id_to_name,
+                team_budgets=team_budgets
             )
             self.state_manager = DraftStateManagerV2(
                 initial_state,
@@ -203,6 +220,7 @@ class LiveDraftEngine:
         logger.info("Running initial valuation (pre-draft)...")
         start_time = time.time()
         initial_valuations = self.run_valuation_pipeline()
+        self.all_players_df = initial_valuations
         self.last_valuation_time = time.time() - start_time
 
         total_budget_remaining = sum(t.budget_remaining for t in self.state_manager.state.teams.values())
@@ -369,6 +387,7 @@ class LiveDraftEngine:
         logger.info("Recomputing valuations...")
         start_time = time.time()
         updated_valuations = self.run_valuation_pipeline()
+        self.all_players_df = updated_valuations
         self.last_valuation_time = time.time() - start_time
 
         total_budget_remaining = sum(t.budget_remaining for t in self.state_manager.state.teams.values())

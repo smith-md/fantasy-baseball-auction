@@ -1,0 +1,18 @@
+{
+  "season": 2026,
+  "note": "Seeded manually — transaction history from 2025 not imported. Future years should derive budgets from trade transaction history. Amounts = trade-adjusted dollars + new owner year bonus.",
+  "team_budgets": {
+    "ng253kq0ml34g0kc": 470,
+    "7d7oqo90ml34g0kc": 500,
+    "r140it80ml34g0kb": 470,
+    "n9dbhlzhml34g0kc": 600,
+    "395i9u8sml34g0kb": 400,
+    "1xckqbdaml34g0kc": 520,
+    "7oml65nsml34g0kb": 483,
+    "q1rxaitmml34g0kb": 490,
+    "ne3s908zml34g0kb": 582,
+    "eozlzqo1ml34g0kb": 500,
+    "jp9m7ovmml34g0kb": 500,
+    "7bqu0ogpml34g0kc": 515
+  }
+}

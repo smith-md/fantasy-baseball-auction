@@ -111,23 +111,10 @@ TEAM_OWNER_YEAR = {
     '7oml65nsml34g0kb': 2,  # Zach - year 2
 }
 
-# Per-team starting budgets for 2026 draft
-# = trade-adjusted dollars + new owner year bonus (year 1: +$30, year 2: +$15)
-# Total is $6030 due to $15 new owner bonus for Dan and Zach (both year 2).
-TEAM_BUDGETS = {
-    'ng253kq0ml34g0kc': 470,  # Jaylen Henderson - I hate this team
-    '7d7oqo90ml34g0kc': 500,  # Mike Aitken - Runner's Super Heroes
-    'r140it80ml34g0kb': 470,  # Jake Esker - ATLiens
-    'n9dbhlzhml34g0kc': 600,  # Patrick Farrar - Bichette Happens
-    '395i9u8sml34g0kb': 400,  # Glennon - Molly's team
-    '1xckqbdaml34g0kc': 520,  # Harry Tate - Kalusari
-    '7oml65nsml34g0kb': 483,  # Zach - Zach (468 trades + 15 year-2 bonus)
-    'q1rxaitmml34g0kb': 490,  # Louis St. Clair - So Saint Louis
-    'ne3s908zml34g0kb': 582,  # Ben Klobe - Yabo Bros
-    'eozlzqo1ml34g0kb': 500,  # Dru Tate - The Disappointment
-    'jp9m7ovmml34g0kb': 500,  # Mike Smith - The McLaniacs
-    '7bqu0ogpml34g0kc': 515,  # Dan Pers - Dan (500 trades + 15 year-2 bonus)
-}
+# Directory for versioned draft settings (budgets, etc.)
+# Per-season budget files live here as draft_budgets_{season}.json
+# These are seeded manually until transaction history import is implemented.
+DRAFT_BUDGETS_DIR = 'settings'
 
 # Position eligibility mappings
 # Define which positions are eligible for UTIL slots

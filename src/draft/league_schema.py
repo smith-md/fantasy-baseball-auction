@@ -504,7 +504,8 @@ def create_initial_league_state_v2(
     players: Dict[str, PlayerState],
     num_teams: int = 12,
     budget_per_team: float = 500.0,
-    team_names: Optional[Dict[str, str]] = None
+    team_names: Optional[Dict[str, str]] = None,
+    team_budgets: Optional[Dict[str, float]] = None
 ) -> LeagueState:
     """
     Create an initial league state at the start of the draft.
@@ -530,7 +531,7 @@ def create_initial_league_state_v2(
         team_entries = [(f"team_{i:02d}", f"Team {i}") for i in range(1, num_teams + 1)]
 
     for team_id, team_name in team_entries:
-        team_budget = config.TEAM_BUDGETS.get(team_id, budget_per_team)
+        team_budget = team_budgets.get(team_id, budget_per_team) if team_budgets else budget_per_team
         teams[team_id] = TeamState(
             team_id=team_id,
             team_name=team_name,
