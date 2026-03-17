@@ -274,8 +274,33 @@ class LiveDraftEngine:
             logger.warning("No keepers parsed from Fantrax rosters -- check response structure in logs")
             return
 
+        # Filter to players that exist in the player pool
+        # Players below projection thresholds or with fuzzy match failures
+        # will have their name as the player_id — skip those with a warning
+        valid_player_ids = set(self.state_manager.state.players.keys())
         keeper_events = []
+        skipped = []
         for k in keepers:
+            if k['player_id'] not in valid_player_ids:
+                skipped.append(k['player_name'])
+                # Still charge the salary against the team's budget even though
+                # we can't add the player to the pool (e.g. no FanGraphs projection)
+                team = self.state_manager.state.teams.get(k['team_id'])
+                if team and k['keeper_salary'] > 0:
+                    team.budget_spent += k['keeper_salary']
+                    logger.debug(
+                        f"Charged ${k['keeper_salary']} for {k['player_name']} "
+                        f"(not in pool) to team {k['team_id']}"
+                    )
+                continue
+            # Use Fantrax roster position as assignment hint so players are
+            # slotted to the position the team actually carries them at
+            fantrax_pos = self._normalize_fantrax_position(k.get('fantrax_position', ''))
+            team = self.state_manager.state.teams.get(k['team_id'])
+            assigned_pos = None
+            if fantrax_pos and team and team.open_slots.get(fantrax_pos, 0) > 0:
+                assigned_pos = fantrax_pos
+
             event = DraftEvent(
                 pick_number=0,
                 player_id=k['player_id'],
@@ -283,17 +308,70 @@ class LiveDraftEngine:
                 team_id=k['team_id'],
                 price=k['keeper_salary'],
                 timestamp=__import__('datetime').datetime.now(),
-                assigned_position=None
+                assigned_position=assigned_pos
             )
             keeper_events.append(event)
 
+        if skipped:
+            logger.warning(f"Skipped {len(skipped)} keepers not in player pool: {skipped}")
+
+        if not keeper_events:
+            logger.warning("No valid keeper events to apply")
+            return
+
         logger.info(f"Applying {len(keeper_events)} Fantrax keepers to league state...")
-        try:
-            self.state_manager.apply_events(keeper_events)
-            total_cost = sum(e.price for e in keeper_events)
-            logger.info(f"Keepers applied: ${total_cost:.0f} total salary committed")
-        except Exception as e:
-            logger.error(f"Failed to apply Fantrax keepers: {e}", exc_info=True)
+        applied = 0
+        failed = []
+        for event in keeper_events:
+            try:
+                self.state_manager.apply_event(event)
+                applied += 1
+            except ValueError as e:
+                if 'no open slots at' not in str(e):
+                    failed.append(f"{event.player_name} ({e})")
+                    continue
+
+                # Primary position full — try fallback slots (UTIL/BN)
+                player = self.state_manager.state.players.get(event.player_id)
+                team = self.state_manager.state.teams.get(event.team_id)
+                if not player or not team:
+                    failed.append(f"{event.player_name} ({e})")
+                    continue
+
+                from .position_assigner import determine_player_type
+                player_type = determine_player_type(player)
+                fallbacks = ['UTIL', 'BN_H'] if player_type == 'hitter' else ['BN_P']
+
+                placed = False
+                for fallback_pos in fallbacks:
+                    if team.open_slots.get(fallback_pos, 0) > 0:
+                        event.assigned_position = fallback_pos
+                        try:
+                            self.state_manager.apply_event(event)
+                            applied += 1
+                            placed = True
+                            break
+                        except Exception:
+                            event.assigned_position = None
+
+                if not placed:
+                    failed.append(f"{event.player_name} ({e})")
+
+        total_cost = sum(e.price for e in keeper_events)
+        logger.info(f"Keepers applied: {applied}/{len(keeper_events)}, ${total_cost:.0f} total salary committed")
+        if failed:
+            logger.warning(f"Failed to apply {len(failed)} keepers: {failed[:5]}")
+
+    @staticmethod
+    def _normalize_fantrax_position(fantrax_pos: str) -> str:
+        """Map Fantrax position string to our roster slot name."""
+        mapping = {
+            'C': 'C', '1B': '1B', '2B': '2B', '3B': '3B', 'SS': 'SS',
+            'OF': 'OF', 'LF': 'OF', 'CF': 'OF', 'RF': 'OF',
+            'DH': 'UTIL', 'UT': 'UTIL', 'UTIL': 'UTIL',
+            'P': 'P', 'SP': 'P', 'RP': 'P',
+        }
+        return mapping.get(fantrax_pos.upper() if fantrax_pos else '', '')
 
     def run_valuation_pipeline(self) -> pd.DataFrame:
         """

@@ -113,6 +113,57 @@ class FantraxClient:
             logger.error(f"Failed to fetch team rosters: {e}")
             raise
 
+    def load_player_id_map(self, force_refresh: bool = False) -> Dict[str, str]:
+        """
+        Download and cache the SFBB player ID cross-reference CSV.
+
+        Returns a dict mapping Fantrax player ID -> player name.
+        Cache is refreshed weekly.
+        """
+        import pandas as pd
+        from .. import config
+
+        cache_file = Path(config.PLAYERID_MAP_CACHE)
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Use cache if fresh (< 7 days old)
+        if not force_refresh and cache_file.exists():
+            age_days = (datetime.now() - datetime.fromtimestamp(cache_file.stat().st_mtime)).days
+            if age_days < 7:
+                try:
+                    df = pd.read_csv(cache_file)
+                    mapping = {
+                        str(row['FANTRAXID']).strip().strip('*'): str(row['PLAYERNAME']).strip()
+                        for _, row in df.iterrows()
+                        if str(row.get('FANTRAXID', '')).strip().strip('*') not in ('', 'nan')
+                        and str(row.get('PLAYERNAME', '')).strip() not in ('', 'nan')
+                    }
+                    logger.info(f"Loaded cached player ID map: {len(mapping)} entries")
+                    return mapping
+                except Exception as e:
+                    logger.warning(f"Failed to load cached player ID map: {e}")
+
+        # Download fresh copy
+        logger.info("Downloading SFBB player ID map...")
+        try:
+            import io
+            headers = {'User-Agent': 'Mozilla/5.0 (compatible; fantasy-baseball-auction/1.0)'}
+            resp = requests.get(config.PLAYERID_MAP_URL, headers=headers, timeout=30)
+            resp.raise_for_status()
+            df = pd.read_csv(io.StringIO(resp.text))
+            df.to_csv(cache_file, index=False)
+            mapping = {
+                str(row['FANTRAXID']).strip(): str(row['PLAYERNAME']).strip()
+                for _, row in df.iterrows()
+                if str(row.get('FANTRAXID', '')).strip() not in ('', 'nan')
+                and str(row.get('PLAYERNAME', '')).strip() not in ('', 'nan')
+            }
+            logger.info(f"Downloaded player ID map: {len(mapping)} entries -> {cache_file}")
+            return mapping
+        except Exception as e:
+            logger.error(f"Failed to download player ID map: {e}")
+            return {}
+
     def parse_rosters_to_keepers(
         self,
         raw_data: Dict,
@@ -153,6 +204,22 @@ class FantraxClient:
             logger.warning(json.dumps(raw_data, indent=2)[:3000])
             return []
 
+        # Load Fantrax ID -> player name map for roster items that lack a name field
+        player_id_map = self.load_player_id_map()
+
+        # Load manual minors overrides (players Fantrax marks ACTIVE but should be MINORS)
+        from .. import config
+        import json as _json
+        minors_overrides: set = set()
+        overrides_file = Path(config.DRAFT_BUDGETS_DIR) / f"minors_overrides_{config.LEAGUE_SEASON}.json"
+        if overrides_file.exists():
+            try:
+                with open(overrides_file) as _f:
+                    minors_overrides = set(_json.load(_f).get('fantrax_ids', []))
+                logger.info(f"Loaded {len(minors_overrides)} minors overrides from {overrides_file}")
+            except Exception as _e:
+                logger.warning(f"Failed to load minors overrides: {_e}")
+
         for team_id, team_data in roster_data.items():
             team_name = self.team_id_to_name.get(team_id, team_data.get('name', team_id))
 
@@ -165,10 +232,21 @@ class FantraxClient:
             )
 
             for player in players:
-                player_name = player.get('name', player.get('playerName', ''))
+                fantrax_id = player.get('id', '')
+                player_name = (
+                    player.get('name') or
+                    player.get('playerName') or
+                    player_id_map.get(fantrax_id, '')
+                )
                 salary = player.get('salary', player.get('contractSalary', player.get('cost', 0)))
 
                 if not player_name:
+                    continue
+
+                # Skip minor league players — they don't count against draft dollars
+                status = player.get('status', '')
+                if status == 'MINORS' or fantrax_id in minors_overrides:
+                    logger.debug(f"Skipping {player_name} (minor league)")
                     continue
 
                 # Only include players with a non-zero salary (actual keepers)
@@ -185,6 +263,7 @@ class FantraxClient:
                     'team_id': team_id,
                     'team_name': team_name,
                     'keeper_salary': float(salary),
+                    'fantrax_position': player.get('position', ''),
                 })
 
         logger.info(f"Parsed {len(keepers)} keepers from Fantrax rosters")
@@ -269,7 +348,7 @@ class FantraxClient:
 
         logger.info(
             f"Loaded and cached mappings: {len(self.team_id_to_name)} teams, "
-            f"{len(self.fantrax_player_to_name)} players → {cache_file}"
+            f"{len(self.fantrax_player_to_name)} players -> {cache_file}"
         )
 
     def normalize_to_events(
@@ -396,26 +475,40 @@ class FantraxClient:
             logger.warning("FanGraphs DataFrame missing 'player_name' column")
             return player_name
 
-        # Get list of FanGraphs player names
+        import unicodedata
+
+        def _strip_accents(s) -> str:
+            """Remove accent marks (e.g. Acuña -> Acuna) for fuzzy matching."""
+            if not isinstance(s, str):
+                return ''
+            return unicodedata.normalize('NFD', s).encode('ascii', 'ignore').decode('ascii')
+
+        # Normalize accents for matching (handles e.g. Acuña vs Acuna)
+        normalized_query = _strip_accents(player_name)
         fg_names = fangraphs_players_df['player_name'].tolist()
+        normalized_fg_names = [_strip_accents(n) for n in fg_names]
 
-        # Fuzzy match (using token_sort_ratio for robustness to ordering)
-        match_result = process.extractOne(
-            player_name,
-            fg_names,
-            scorer=fuzz.token_sort_ratio
-        )
+        # Try token_sort_ratio first, then token_set_ratio (handles Jr./Sr. suffix mismatches)
+        best_score = 0
+        best_norm_name = None
+        for scorer in (fuzz.token_sort_ratio, fuzz.token_set_ratio):
+            result = process.extractOne(normalized_query, normalized_fg_names, scorer=scorer)
+            if result and result[1] > best_score:
+                best_score = result[1]
+                best_norm_name = result[0]
 
-        if match_result is None:
+        if best_norm_name is None:
             logger.warning(f"No fuzzy match found for: {player_name}")
             return player_name
 
-        matched_name, score = match_result[0], match_result[1]
+        # Map normalized name back to original FanGraphs name
+        idx = normalized_fg_names.index(best_norm_name)
+        matched_name = fg_names[idx]
 
         # Require high confidence (90%+)
-        if score < 90:
+        if best_score < 90:
             logger.warning(
-                f"Low confidence match for '{player_name}' → '{matched_name}' ({score}%)"
+                f"Low confidence match for '{player_name}' -> '{matched_name}' ({best_score}%)"
             )
             return player_name
 
@@ -429,7 +522,7 @@ class FantraxClient:
             return player_name
 
         player_id = matched_row.iloc[0]['player_id']
-        logger.debug(f"Matched: '{player_name}' → '{matched_name}' (ID: {player_id}, {score}%)")
+        logger.debug(f"Matched: '{player_name}' -> '{matched_name}' (ID: {player_id}, {best_score}%)")
 
         return player_id
 

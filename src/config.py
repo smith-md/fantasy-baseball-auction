@@ -99,7 +99,7 @@ MINIMUM_BID = 1
 MINIMUM_SPEND = TOTAL_PLAYERS * MINIMUM_BID  # $288
 DOLLARS_TO_ALLOCATE = TOTAL_BUDGET - MINIMUM_SPEND  # $5712
 
-# Total players in the draft pool — includes fringe players beyond actual roster slots.
+# Total players in the draft pool ï¿½ includes fringe players beyond actual roster slots.
 # Real roster spots = TOTAL_PLAYERS (288). Extra players get assigned a position for
 # valuation purposes but will have negative/near-zero dollar values.
 PLAYER_POOL_SIZE = 500
@@ -205,6 +205,12 @@ API_PORT = 8000
 MAX_CONCURRENT_SESSIONS = 1  # Only one session at a time for MVP
 SESSION_TIMEOUT_HOURS = 12   # Auto-expire sessions after 12 hours (future feature)
 
+# ===== LEAGUE CONFIGURATION =====
+
+# Fantrax league ID and season - set these to auto-start sessions
+LEAGUE_ID = '45zdadwuml34g0k7'
+LEAGUE_SEASON = 2026
+
 # ===== FRONTEND CONFIGURATION =====
 
 # User Team ID - Change this to match your team in the league
@@ -212,3 +218,9 @@ USER_TEAM_ID = 'jp9m7ovmml34g0kb'
 
 # Auto-refresh interval for frontend (seconds)
 FRONTEND_AUTO_REFRESH_INTERVAL = 10
+
+# ===== PLAYER ID CROSS-REFERENCE =====
+
+# SFBB player ID map - maps Fantrax player IDs to player names and FanGraphs IDs
+PLAYERID_MAP_URL = "https://www.smartfantasybaseball.com/PLAYERIDMAPCSV"
+PLAYERID_MAP_CACHE = "data/mappings/player_id_map.csv"

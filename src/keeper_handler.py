@@ -45,8 +45,8 @@ class KeeperHandler:
         if not keeper_path.exists():
             raise FileNotFoundError(f"Keeper file not found: {self.keeper_file}")
 
-        # Load keeper CSV
-        self.keepers_df = pd.read_csv(keeper_path)
+        # Load keeper CSV — force player_id as string to match player pool dtype
+        self.keepers_df = pd.read_csv(keeper_path, dtype={'player_id': str})
 
         # Validate required columns
         required_cols = ['keeper_salary']

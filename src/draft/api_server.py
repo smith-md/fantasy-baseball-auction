@@ -296,11 +296,13 @@ def get_projected_standings():
             )
 
         league_state = session_manager._engine.state_manager.state
+        stats_aggregator = session_manager._engine.state_manager.stats_aggregator
 
         # Calculate standings with user team marked
         standings = calculate_projected_standings(
             league_state,
-            user_team_id=config.USER_TEAM_ID
+            user_team_id=config.USER_TEAM_ID,
+            stats_aggregator=stats_aggregator
         )
         summary = get_standings_summary(standings)
 
@@ -408,7 +410,11 @@ def get_team_needs(team_id: Optional[str] = None):
         )
 
         # Calculate standings (needed for team needs analysis)
-        standings = calculate_projected_standings(league_state, target_team_id)
+        standings = calculate_projected_standings(
+            league_state,
+            user_team_id=target_team_id,
+            stats_aggregator=session_manager._engine.state_manager.stats_aggregator
+        )
 
         # Calculate team needs
         needs = calculate_team_needs(
@@ -487,13 +493,36 @@ def health_check():
     }
 
 
+def _auto_start_session():
+    """Start a session using config.LEAGUE_ID if no session is currently active."""
+    if session_manager._engine:
+        logger.info("Session already active, skipping auto-start")
+        return
+    try:
+        logger.info(f"Auto-starting session for league {config.LEAGUE_ID}...")
+        session_manager.start_session(
+            league_id=config.LEAGUE_ID,
+            season=config.LEAGUE_SEASON,
+            poll_interval=config.DEFAULT_POLL_INTERVAL,
+            num_teams=config.NUM_TEAMS
+        )
+        logger.info("Auto-start complete")
+    except Exception as e:
+        logger.error(f"Auto-start failed: {e}", exc_info=True)
+
+
 # Startup event
 @app.on_event("startup")
 async def startup_event():
-    """Log startup message."""
+    """Log startup message and auto-start session if LEAGUE_ID is configured."""
     logger.info("Draft Session API server started")
     logger.info(f"Session directory: {config.DRAFT_SESSIONS_DIR}")
     logger.info(f"Cache directory: {config.DRAFT_CACHE_DIR}")
+
+    if config.LEAGUE_ID:
+        import threading
+        thread = threading.Thread(target=_auto_start_session, daemon=True)
+        thread.start()
 
 
 # Shutdown event

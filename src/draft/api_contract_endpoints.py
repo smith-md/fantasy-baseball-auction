@@ -135,7 +135,8 @@ def get_standings():
         # Calculate projected standings
         standings = calculate_projected_standings(
             league_state,
-            user_team_id=config.USER_TEAM_ID
+            user_team_id=config.USER_TEAM_ID,
+            stats_aggregator=None
         )
 
         # Serialize to contract format
@@ -253,7 +254,11 @@ def get_recommendations(
         )
 
         # Calculate standings (needed for needs analysis)
-        standings = calculate_projected_standings(league_state, target_team_id)
+        standings = calculate_projected_standings(
+            league_state,
+            user_team_id=target_team_id,
+            stats_aggregator=None
+        )
 
         # Calculate team needs
         needs = calculate_team_needs(

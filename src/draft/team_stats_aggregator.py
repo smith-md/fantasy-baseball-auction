@@ -82,7 +82,7 @@ class TeamStatsAggregator:
             'IP': 0.0,  # For ERA and WHIP
         }
 
-        # Iterate through all positions and players
+        # Iterate through all roster positions
         for position, player_ids in roster.items():
             for player_id in player_ids:
                 # Validate player exists in pool
@@ -107,6 +107,76 @@ class TeamStatsAggregator:
 
                 if is_pitcher:
                     self._aggregate_pitcher(stats, counting_stats, rate_numerators, rate_denominators)
+
+        return TeamStats(
+            counting=counting_stats,
+            rate_numerators=rate_numerators,
+            rate_denominators=rate_denominators
+        )
+
+    def aggregate_for_player_ids(
+        self,
+        player_ids: set,
+        player_pool: Dict[str, PlayerState]
+    ) -> TeamStats:
+        """
+        Aggregate stats for a specific set of player_ids.
+
+        Used for optimal lineup selection in standings projection — avoids
+        relying on roster slot assignment order.
+
+        Args:
+            player_ids: Set of player IDs to aggregate
+            player_pool: Complete player pool for validation
+
+        Returns:
+            TeamStats with aggregated counting and rate stat components
+        """
+        # Initialize accumulators (identical to aggregate_team_stats)
+        counting_stats = {
+            'R': 0.0,
+            'RBI': 0.0,
+            'SB': 0.0,
+            'W_QS': 0.0,
+            'SV_HLD': 0.0,
+            'K': 0.0,
+        }
+
+        rate_numerators = {
+            'OBP_num': 0.0,
+            'SLG_num': 0.0,
+            'ERA_num': 0.0,
+            'WHIP_num': 0.0,
+        }
+
+        rate_denominators = {
+            'PA': 0.0,
+            'AB': 0.0,
+            'IP': 0.0,
+        }
+
+        for player_id in player_ids:
+            if player_id not in player_pool:
+                logger.warning(f"Player {player_id} in lineup set but not in player pool — skipping")
+                continue
+
+            if player_id not in self.player_stats:
+                logger.warning(
+                    f"Player {player_id} ({player_pool[player_id].player_name}) "
+                    f"not found in projection data — skipping"
+                )
+                continue
+
+            stats = self.player_stats[player_id]
+
+            is_hitter = 'PA' in stats and pd.notna(stats.get('PA'))
+            is_pitcher = 'IP' in stats and pd.notna(stats.get('IP'))
+
+            if is_hitter:
+                self._aggregate_hitter(stats, counting_stats, rate_numerators, rate_denominators)
+
+            if is_pitcher:
+                self._aggregate_pitcher(stats, counting_stats, rate_numerators, rate_denominators)
 
         return TeamStats(
             counting=counting_stats,
@@ -141,7 +211,10 @@ class TeamStatsAggregator:
         h = self._get_stat(stats, 'H')
         bb = self._get_stat(stats, 'BB')
         hbp = self._get_stat(stats, 'HBP')
-        tb = self._get_stat(stats, 'TB')
+
+        # FanGraphs does not provide TB directly — compute from SLG * AB
+        slg = self._get_stat(stats, 'SLG')
+        tb = slg * ab
 
         # OBP components
         rate_numerators['OBP_num'] += (h + bb + hbp)
