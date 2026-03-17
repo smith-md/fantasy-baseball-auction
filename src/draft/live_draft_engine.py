@@ -96,6 +96,10 @@ class LiveDraftEngine:
         # Performance tracking
         self.last_valuation_time = 0.0
 
+        # Roster-based polling state
+        self._roster_snapshot: set = set()   # Fantrax player IDs seen in rosters
+        self._pick_counter: int = 0          # Monotonic pick number counter
+
     def initialize(self) -> None:
         """
         One-time setup for live draft session.
@@ -362,6 +366,10 @@ class LiveDraftEngine:
         if failed:
             logger.warning(f"Failed to apply {len(failed)} keepers: {failed[:5]}")
 
+        # Seed roster snapshot so keepers are not re-detected as new picks
+        self._roster_snapshot = {k['fantrax_id'] for k in keepers if k.get('fantrax_id')}
+        logger.info(f"Roster snapshot seeded with {len(self._roster_snapshot)} keeper Fantrax IDs")
+
     @staticmethod
     def _normalize_fantrax_position(fantrax_pos: str) -> str:
         """Map Fantrax position string to our roster slot name."""
@@ -469,22 +477,24 @@ class LiveDraftEngine:
             except:
                 pass
 
-    def poll_and_update(self) -> Optional[pd.DataFrame]:
+    def _deprecated_poll_and_update_draft_results(self) -> Optional[pd.DataFrame]:
         """
-        Single poll cycle: check for new picks and update if found.
+        Deprecated: use roster-based polling instead (fetch_rosters + roster_diff_to_events).
+
+        Single poll cycle using getDraftResults: check for new picks and update if found.
 
         Returns:
             Updated valuations DataFrame if new picks detected, None otherwise
         """
         # Fetch current draft results from Fantrax
         try:
-            raw_data = self.fantrax_client.fetch_draft_results()
+            raw_data = self.fantrax_client._deprecated_fetch_draft_results()
         except Exception as e:
             logger.error(f"Failed to fetch draft results: {e}")
             return None
 
         # Normalize to events
-        all_events = self.fantrax_client.normalize_to_events(
+        all_events = self.fantrax_client._deprecated_normalize_to_events(
             raw_data,
             fangraphs_players_df=pd.concat([
                 self.base_hitters_df,
@@ -505,7 +515,7 @@ class LiveDraftEngine:
         logger.info(f"Detected {len(new_events)} new pick(s)")
         for event in new_events:
             logger.info(
-                f"  Pick {event.pick_number}: {event.player_name} → "
+                f"  Pick {event.pick_number}: {event.player_name} -> "
                 f"{self.fantrax_client.team_id_to_name.get(event.team_id, event.team_id)} "
                 f"(${event.price})"
             )
@@ -531,6 +541,62 @@ class LiveDraftEngine:
         )
 
         # Update cache
+        self.result_cache.update(
+            valuations_df=updated_valuations,
+            league_state=self.state_manager.state,
+            timestamp=datetime.now()
+        )
+
+        return updated_valuations
+
+    def poll_and_update(self) -> Optional[pd.DataFrame]:
+        """
+        Single poll cycle: diff getTeamRosters against snapshot to detect new picks.
+
+        Returns:
+            Updated valuations DataFrame if new picks detected, None otherwise
+        """
+        try:
+            raw_data = self.fantrax_client.fetch_rosters()
+        except Exception as e:
+            logger.error(f"Failed to fetch rosters: {e}")
+            return None
+
+        fangraphs_df = pd.concat([self.base_hitters_df, self.base_pitchers_df])
+
+        new_events, updated_snapshot = self.fantrax_client.roster_diff_to_events(
+            raw_data,
+            self._roster_snapshot,
+            fangraphs_df,
+            pick_counter_start=self._pick_counter + 1
+        )
+
+        # Always update snapshot to stay current (handles drops/moves too)
+        self._roster_snapshot = updated_snapshot
+
+        if not new_events:
+            return None
+
+        logger.info(f"Detected {len(new_events)} new pick(s) from roster diff")
+        for event in new_events:
+            self.state_manager.apply_event(event)
+            self.event_store.append_event(event)
+            self._pick_counter = event.pick_number
+
+        # Re-run valuation pipeline
+        logger.info("Recomputing valuations...")
+        start_time = time.time()
+        updated_valuations = self.run_valuation_pipeline()
+        self.all_players_df = updated_valuations
+        self.last_valuation_time = time.time() - start_time
+
+        total_budget_remaining = sum(t.budget_remaining for t in self.state_manager.state.teams.values())
+        logger.info(
+            f"Valuation complete: {len(updated_valuations)} players, "
+            f"${total_budget_remaining:.0f} available "
+            f"[{self.last_valuation_time:.2f}s]"
+        )
+
         self.result_cache.update(
             valuations_df=updated_valuations,
             league_state=self.state_manager.state,

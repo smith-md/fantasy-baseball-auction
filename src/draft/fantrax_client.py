@@ -11,7 +11,7 @@ import time
 import json
 import requests
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from datetime import datetime
 from fuzzywuzzy import fuzz, process
 
@@ -55,8 +55,10 @@ class FantraxClient:
         if self.api_key:
             self.session.headers['Authorization'] = f'Bearer {self.api_key}'
 
-    def fetch_draft_results(self) -> Dict:
+    def _deprecated_fetch_draft_results(self) -> Dict:
         """
+        Deprecated: use roster-based polling instead (fetch_rosters + roster_diff_to_events).
+
         Poll Fantrax API for current draft state.
 
         Returns:
@@ -264,12 +266,114 @@ class FantraxClient:
                     'team_name': team_name,
                     'keeper_salary': float(salary),
                     'fantrax_position': player.get('position', ''),
+                    'fantrax_id': fantrax_id,
                 })
 
         logger.info(f"Parsed {len(keepers)} keepers from Fantrax rosters")
         return keepers
 
+    def roster_diff_to_events(
+        self,
+        raw_data: Dict,
+        known_fantrax_ids: Set[str],
+        fangraphs_players_df=None,
+        pick_counter_start: int = 1
+    ) -> Tuple[List[DraftEvent], Set[str]]:
+        """
+        Diff current Fantrax rosters against a known snapshot to detect new picks.
 
+        Args:
+            raw_data: Raw JSON from getTeamRosters endpoint
+            known_fantrax_ids: Set of Fantrax player IDs already accounted for
+            fangraphs_players_df: FanGraphs projections for player ID matching
+            pick_counter_start: Pick number to assign to the first new event
+
+        Returns:
+            Tuple of (new_events, updated_known_fantrax_ids) where
+            updated_known_fantrax_ids contains ALL IDs seen in this poll.
+        """
+        from .. import config
+        import json as _json
+
+        roster_data = raw_data.get('rosters', raw_data.get('teamRosters', {}))
+        if not roster_data:
+            logger.warning("roster_diff_to_events: no roster data found in response")
+            return [], known_fantrax_ids
+
+        player_id_map = self.load_player_id_map()
+
+        minors_overrides: set = set()
+        overrides_file = Path(config.DRAFT_BUDGETS_DIR) / f"minors_overrides_{config.LEAGUE_SEASON}.json"
+        if overrides_file.exists():
+            try:
+                with open(overrides_file) as _f:
+                    minors_overrides = set(_json.load(_f).get('fantrax_ids', []))
+            except Exception as _e:
+                logger.warning(f"Failed to load minors overrides: {_e}")
+
+        new_events: List[DraftEvent] = []
+        all_seen_ids: Set[str] = set(known_fantrax_ids)
+        pick_counter = pick_counter_start
+
+        for team_id, team_data in roster_data.items():
+            players = (
+                team_data.get('rosterItems') or
+                team_data.get('players') or
+                team_data.get('roster') or
+                []
+            )
+
+            for player in players:
+                fantrax_id = player.get('id', '')
+                if not fantrax_id:
+                    continue
+
+                # Track all seen IDs to keep snapshot current
+                all_seen_ids.add(fantrax_id)
+
+                # Skip if already known
+                if fantrax_id in known_fantrax_ids:
+                    continue
+
+                player_name = (
+                    player.get('name') or
+                    player.get('playerName') or
+                    player_id_map.get(fantrax_id, '')
+                )
+                if not player_name:
+                    logger.debug(f"roster_diff_to_events: no name for new fantrax_id {fantrax_id}, skipping")
+                    continue
+
+                # Skip minors
+                status = player.get('status', '')
+                if status == 'MINORS' or fantrax_id in minors_overrides:
+                    logger.debug(f"Skipping new player {player_name} (minor league)")
+                    continue
+
+                salary = player.get('salary', player.get('contractSalary', player.get('cost', 0)))
+                price = float(salary) if salary else float(config.MINIMUM_BID)
+                if price == 0:
+                    price = float(config.MINIMUM_BID)
+
+                fangraphs_id = self._match_to_fangraphs(player_name, fangraphs_players_df)
+                team_name = self.team_id_to_name.get(team_id, team_id)
+                fantrax_pos = player.get('position', '')
+
+                event = DraftEvent(
+                    pick_number=pick_counter,
+                    player_id=fangraphs_id,
+                    player_name=player_name,
+                    team_id=team_id,
+                    price=price,
+                    timestamp=datetime.now(),
+                )
+                new_events.append(event)
+                logger.info(
+                    f"New pick detected: {player_name} -> {team_name} (${price:.0f}, pick #{pick_counter})"
+                )
+                pick_counter += 1
+
+        return new_events, all_seen_ids
 
     def load_mappings(self, force_refresh: bool = False) -> None:
         """
@@ -351,12 +455,14 @@ class FantraxClient:
             f"{len(self.fantrax_player_to_name)} players -> {cache_file}"
         )
 
-    def normalize_to_events(
+    def _deprecated_normalize_to_events(
         self,
         raw_data: Dict,
         fangraphs_players_df=None
     ) -> List[DraftEvent]:
         """
+        Deprecated: use roster-based polling instead (fetch_rosters + roster_diff_to_events).
+
         Convert Fantrax draft results to DraftEvent objects.
 
         Args:
@@ -379,7 +485,7 @@ class FantraxClient:
 
         for pick_data in draft_picks:
             try:
-                event = self._parse_draft_pick(pick_data, fangraphs_players_df)
+                event = self._deprecated_parse_draft_pick(pick_data, fangraphs_players_df)
                 events.append(event)
             except (KeyError, ValueError) as e:
                 logger.error(f"Failed to parse draft pick: {e}\nData: {pick_data}")
@@ -391,12 +497,14 @@ class FantraxClient:
         logger.debug(f"Normalized {len(events)} draft picks to DraftEvent objects")
         return events
 
-    def _parse_draft_pick(
+    def _deprecated_parse_draft_pick(
         self,
         pick_data: Dict,
         fangraphs_players_df=None
     ) -> DraftEvent:
         """
+        Deprecated: use roster-based polling instead (fetch_rosters + roster_diff_to_events).
+
         Parse a single draft pick from Fantrax JSON.
 
         Args:
