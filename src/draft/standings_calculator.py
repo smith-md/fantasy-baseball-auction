@@ -227,13 +227,19 @@ def calculate_projected_standings(
     # Step 1-3: Calculate projected stats for each team
     for team_id, team in league_state.teams.items():
         if stats_aggregator is not None:
-            # Optimal lineup: pick best players for active slots regardless of
-            # which slot they happen to be assigned to in the roster dict
-            active_ids, open_active_slots = select_optimal_lineup(
-                team, league_state.players, stats_aggregator.player_stats
-            )
+            # Aggregate all drafted players (including bench — they accumulate
+            # stats over a full season via rotations), then use optimal lineup
+            # selection only to determine how many active slots are still open.
+            all_drafted_ids = {
+                pid
+                for player_ids in team.roster.values()
+                for pid in player_ids
+            }
             projected_stats = stats_aggregator.aggregate_for_player_ids(
-                active_ids, league_state.players
+                all_drafted_ids, league_state.players
+            )
+            _, open_active_slots = select_optimal_lineup(
+                team, league_state.players, stats_aggregator.player_stats
             )
         else:
             # Fallback: use pre-aggregated stats and open_slots (bench excluded)
