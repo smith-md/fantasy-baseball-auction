@@ -115,17 +115,22 @@ class DraftStateManagerV2:
 
         assigned_pos = event.assigned_position
 
-        # Validate assigned position is valid for team
-        if assigned_pos not in team.open_slots:
+        # The league-wide position assigner may pick a position this specific team
+        # has already filled (e.g. two keepers at 1B). Fall back through UTIL then
+        # BN so the pick is never silently dropped.
+        player_type = determine_player_type(player)
+        bench_slot = 'BN_P' if player_type == 'pitcher' else 'BN_H'
+        fallback_order = [assigned_pos, 'UTIL', bench_slot]
+        assigned_pos = next(
+            (pos for pos in fallback_order if team.open_slots.get(pos, 0) > 0),
+            None
+        )
+        if assigned_pos is None:
             raise ValueError(
-                f"Invalid position {assigned_pos} for team {team.team_id}"
+                f"Team {team.team_name} has no open slots for {player.player_name} "
+                f"(tried: {fallback_order})"
             )
-
-        # Validate team has open slot at assigned position
-        if team.open_slots[assigned_pos] <= 0:
-            raise ValueError(
-                f"Team {team.team_name} has no open slots at {assigned_pos}"
-            )
+        event.assigned_position = assigned_pos
 
         # Validate budget
         if event.price > team.budget_remaining:

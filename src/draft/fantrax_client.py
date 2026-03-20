@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from datetime import datetime
 from fuzzywuzzy import fuzz, process
 
-from .draft_event import DraftEvent
+from .league_schema import DraftEvent
 
 logger = logging.getLogger(__name__)
 
@@ -210,15 +210,19 @@ class FantraxClient:
         player_id_map = self.load_player_id_map()
 
         # Load manual minors overrides (players Fantrax marks ACTIVE but should be MINORS)
+        # and roster overrides (players Fantrax marks MINORS but are on a roster)
         from .. import config
         import json as _json
         minors_overrides: set = set()
+        roster_overrides: set = set()
         overrides_file = Path(config.DRAFT_BUDGETS_DIR) / f"minors_overrides_{config.LEAGUE_SEASON}.json"
         if overrides_file.exists():
             try:
                 with open(overrides_file) as _f:
-                    minors_overrides = set(_json.load(_f).get('fantrax_ids', []))
-                logger.info(f"Loaded {len(minors_overrides)} minors overrides from {overrides_file}")
+                    data = _json.load(_f)
+                    minors_overrides = set(data.get('fantrax_ids', []))
+                    roster_overrides = set(data.get('roster_overrides', {}).get('fantrax_ids', []))
+                logger.info(f"Loaded {len(minors_overrides)} minors overrides, {len(roster_overrides)} roster overrides")
             except Exception as _e:
                 logger.warning(f"Failed to load minors overrides: {_e}")
 
@@ -246,13 +250,16 @@ class FantraxClient:
                     continue
 
                 # Skip minor league players — they don't count against draft dollars
+                # Exception: roster_overrides are MINORS-status players actually on a roster
                 status = player.get('status', '')
-                if status == 'MINORS' or fantrax_id in minors_overrides:
+                is_roster_override = fantrax_id in roster_overrides
+                if (status == 'MINORS' or fantrax_id in minors_overrides) and not is_roster_override:
                     logger.debug(f"Skipping {player_name} (minor league)")
                     continue
 
                 # Only include players with a non-zero salary (actual keepers)
-                if not salary or salary == 0:
+                # Roster overrides may have $0 salary (stashed on MINORS reserve)
+                if not is_roster_override and (not salary or salary == 0):
                     logger.debug(f"Skipping {player_name} (no salary)")
                     continue
 
@@ -303,11 +310,14 @@ class FantraxClient:
         player_id_map = self.load_player_id_map()
 
         minors_overrides: set = set()
+        roster_overrides: set = set()
         overrides_file = Path(config.DRAFT_BUDGETS_DIR) / f"minors_overrides_{config.LEAGUE_SEASON}.json"
         if overrides_file.exists():
             try:
                 with open(overrides_file) as _f:
-                    minors_overrides = set(_json.load(_f).get('fantrax_ids', []))
+                    data = _json.load(_f)
+                    minors_overrides = set(data.get('fantrax_ids', []))
+                    roster_overrides = set(data.get('roster_overrides', {}).get('fantrax_ids', []))
             except Exception as _e:
                 logger.warning(f"Failed to load minors overrides: {_e}")
 
@@ -344,9 +354,9 @@ class FantraxClient:
                     logger.debug(f"roster_diff_to_events: no name for new fantrax_id {fantrax_id}, skipping")
                     continue
 
-                # Skip minors
+                # Skip minors (but not roster overrides — those are stashed on MINORS reserve)
                 status = player.get('status', '')
-                if status == 'MINORS' or fantrax_id in minors_overrides:
+                if (status == 'MINORS' or fantrax_id in minors_overrides) and fantrax_id not in roster_overrides:
                     logger.debug(f"Skipping new player {player_name} (minor league)")
                     continue
 

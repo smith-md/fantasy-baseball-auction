@@ -4,5 +4,11 @@
   "fantrax_ids": [
     "05rik",
     "05rb3"
-  ]
+  ],
+  "roster_overrides": {
+    "note": "Players with MINORS status in Fantrax who are actually on a roster (e.g. reserved/stashed). These are removed from the available pool but NOT charged keeper salary.",
+    "fantrax_ids": [
+      "05y3u"
+    ]
+  }
 }

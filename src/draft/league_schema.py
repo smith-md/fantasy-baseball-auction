@@ -229,6 +229,15 @@ class DraftEvent:
             assigned_position=data.get('assigned_position')
         )
 
+    def to_json(self) -> str:
+        """Convert to JSON string."""
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, json_str: str) -> 'DraftEvent':
+        """Create DraftEvent from JSON string."""
+        return cls.from_dict(json.loads(json_str))
+
 
 @dataclass
 class DraftState:
